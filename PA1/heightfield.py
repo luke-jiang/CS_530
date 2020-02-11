@@ -5,8 +5,11 @@
 # Luke Jiang
 # 02/03/2020
 
-# Use Warp filter to show the height field
+"""
+Use Warp filter to show the height field.
 
+Command line interface: heightfield.py <elevation> <image>
+"""
 
 import vtk
 import sys

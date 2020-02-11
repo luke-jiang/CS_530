@@ -5,10 +5,15 @@
 # Luke Jiang
 # 02/03/2020
 
-# use Contour filter to show the contour lines of the height field
-# isocontour line defined in interval [-10000, 8000] with step = 1000
-# use colorTrans to make low contours blue and high contours yellow, mark the
-# sea-level contour red.
+"""
+Use Contour filter to show the contour lines of the height field.
+Isocontour line defined in interval [-10000, 8000] with step = 1000.
+Use colorTrans to make low contours blue and high contours yellow, mark the
+    sea-level contour red.
+
+Command line interface: isocontour.py <elevation> <image>
+
+"""
 
 
 import vtk

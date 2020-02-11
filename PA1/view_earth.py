@@ -5,7 +5,11 @@
 # Luke Jiang
 # 02/03/2020
 
-# Combine part1 and part2 to a globe
+"""
+Combine part1 and part2 to display on globe.
+
+Command line interface: view_earth.py <sphere_elevation> <image>
+"""
 
 import vtk
 import sys
