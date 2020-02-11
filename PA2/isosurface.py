@@ -1,5 +1,29 @@
 #!/usr/bin/env python
 
+# CS 530
+# Project 2 Task 1
+# Luke Jiang
+# 02/11/2020
+
+""" Description:
+Display the CT dataset using isosurfacing while supporting interactive
+    modification of the corresponding isovalue.
+Use three clipping planes for each dimension to show internal details.
+
+Command line interface: python isosurface.py <data> [--val <value>] [--clip <X> <Y> <Z>]
+    <data>:     3D scalar dataset to visualize
+    <value>:    initial isovalue (optional)
+    <X>:        initial position of the clipping plane in x-axis (optional)
+    <Y>:        initial position of the clipping plane in y-axis (optional)
+    <Z>:        initial position of the clipping plane in z-axis (optional)
+"""
+
+""" Observations:
+    skin:       <= 904
+    muscle:     1040 ~ 1190
+    bone:       >= 1190
+"""
+
 import vtk
 import sys
 import argparse
@@ -8,6 +32,10 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLa
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+
+# default values
+DEFAULT_CONTOUR_VAL = 500
+DEFAULT_PLANE_POS = [0, 0, 0]
 
 
 def make(ct_name, contourVal, clipX, clipY, clipZ):
@@ -44,15 +72,17 @@ def make(ct_name, contourVal, clipX, clipY, clipZ):
     clipperZ.SetInputConnection(clipperY.GetOutputPort())
     clipperZ.SetClipFunction(planeZ)
 
-    # the color map
+    # define the color map
     colorTrans = vtk.vtkColorTransferFunction()
     colorTrans.SetColorSpaceToRGB()
     colorTrans.AddRGBPoint(1319, 0.9, 0.9, 0.9)  # bone
     colorTrans.AddRGBPoint(1153, 0.9, 0.9, 0.9)  # bone
+    colorTrans.AddRGBPoint(1140, 204/256, 71/256, 62/256)  # muscle
+    colorTrans.AddRGBPoint(1040, 248/256, 10/256, 10/256)  # muscle
     colorTrans.AddRGBPoint(500, 197/256, 140/256, 133/256)  # skin
-    colorTrans.AddRGBPoint(753, 197 / 256, 140 / 256, 133 / 256)  # skin
+    colorTrans.AddRGBPoint(753, 197/256, 140/256, 133/256)  # skin
 
-    # color bar to diaplay the color scale
+    # color bar to display the color scale
     colorBar = vtk.vtkScalarBarActor()
     colorBar.SetOrientationToHorizontal()
     colorBar.SetLookupTable(colorTrans)
@@ -109,35 +139,25 @@ class IsosurfaceDemo(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # self.contourVal = 0
-        # self.clipX = 0
-        # self.clipY = 0
-        # self.clipZ = 0
-
-        # extract default isovalue and three clip positions
-        self.contourVal = margs.val[0]
-        self.clipX = margs.clip[0]
-        self.clipY = margs.clip[1]
-        self.clipZ = margs.clip[2]
-
-        # ct_name = "vffeet-ct-small.vti"
-
-        ct_name = margs.file
+        self.contourVal = margs.val         # default contour isovalue
+        self.clipX = margs.clip[0]          # default clipX position
+        self.clipY = margs.clip[1]          # default clipY position
+        self.clipZ = margs.clip[2]          # default clipZ position
+        ct_name = margs.file                # CT file name
 
         [self.contour, self.planeX, self.planeY, self.planeZ, self.actor, self.colorBarWidget] = \
             make(ct_name, self.contourVal, self.clipX, self.clipY, self.clipZ)
+
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.actor)
         self.ren.SetBackground(0.75, 0.75, 0.75)
         self.ren.ResetCamera()
-        # self.ren.GetActiveCamera().Azimuth(180)
-        # self.ren.GetActiveCamera().Roll(180)
+
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
 
         self.colorBarWidget.SetInteractor(self.iren)
         self.colorBarWidget.On()
-
 
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
@@ -175,18 +195,17 @@ class IsosurfaceDemo(QMainWindow):
 
 
 if __name__ == "__main__":
-    # global args
 
+    # --define argument parser and parse arguments--
     parser = argparse.ArgumentParser(
         description="Parser for isosurface")
     parser.add_argument('file')
-    parser.add_argument('--val', type=int, metavar='int', nargs=1, help='initial isovalue', default=[500])
+    parser.add_argument('--val', type=int, metavar='int', help='initial isovalue', default=DEFAULT_CONTOUR_VAL)
     parser.add_argument('--clip', type=int, metavar='int', nargs=3,
-                        help='initial positions of clipping planes', default=[0, 0, 0])
-
+                        help='initial positions of clipping planes', default=DEFAULT_PLANE_POS)
     args = parser.parse_args()
 
-
+    # --main app--
     app = QApplication(sys.argv)
     window = IsosurfaceDemo(margs=args)
     window.ui.vtkWidget.GetRenderWindow().SetSize(800, 800)
@@ -194,6 +213,7 @@ if __name__ == "__main__":
     window.setWindowState(Qt.WindowMaximized)
     window.iren.Initialize()
 
+    # --hook up callbacks--
     window.ui.slider_contour.valueChanged.connect(window.contour_callback)
     window.ui.slider_clipX.valueChanged.connect(window.clipX_callback)
     window.ui.slider_clipY.valueChanged.connect(window.clipY_callback)

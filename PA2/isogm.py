@@ -1,5 +1,28 @@
 #!/usr/bin/env python
 
+# CS 530
+# Project 2 Task 2
+# Luke Jiang
+# 02/11/2020
+
+""" Description:
+Color map the value of gradient magnitude to a list of given isosurfaces.
+
+Command line interface: python isogm.py <data> <gradmag> <isoval> [--cmap <colors>] [--clip <X> <Y> <Z>]
+    <data>:     3D scalar dataset to visualize
+    <gradma>:   gradient magnitide
+    <isoval>:   name of a .txt file containing the isovalues to use
+    <colors>:   name of a .txt file containing a color map definition (optional)
+    <X>:        initial position of the clipping plane in x-axis (optional)
+    <Y>:        initial position of the clipping plane in y-axis (optional)
+    <Z>:        initial position of the clipping plane in z-axis (optional)
+"""
+
+""" Observations:
+The bones have low gradient magnitude, the skin has high gradient magnitude, muscles in between.
+"""
+
+
 import vtk
 import sys
 import argparse
@@ -9,18 +32,24 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+# default values
+DEFAULT_COLORMAP = [[0, 1, 1, 1], [2500, 1, 1, 1], [109404, 1, 0, 0]]
+DEFAULT_PLANE_POS = [0, 0, 0]
+
 
 def make(ct_name, gm_name, isoValues, colormap_data):
+    # read the CT file
     ct = vtk.vtkXMLImageDataReader()
     ct.SetFileName(ct_name)
     ct.Update()
 
+    # read the gradient magnitude file
     gm = vtk.vtkXMLImageDataReader()
     gm.SetFileName(gm_name)
     gm.Update()
-    print(gm.GetOutput().GetPointData().GetArray(0).GetRange())  # Get data range
+    # print(gm.GetOutput().GetPointData().GetArray(0).GetRange())  # Get data range
 
-    # TODO: Add muscle contour value
+    # extract isodurfaces given contour isovalues
     ctContour = vtk.vtkContourFilter()
     i = 0
     for v in isoValues:
@@ -30,6 +59,7 @@ def make(ct_name, gm_name, isoValues, colormap_data):
     # ctContour.SetValue(1, 1349)
     ctContour.SetInputConnection(ct.GetOutputPort())
 
+    # three clipping planes
     planeX = vtk.vtkPlane()
     planeX.SetOrigin(0, 0, 0)
     planeX.SetNormal(1.0, 0, 0)
@@ -51,33 +81,33 @@ def make(ct_name, gm_name, isoValues, colormap_data):
     clipperZ.SetInputConnection(clipperY.GetOutputPort())
     clipperZ.SetClipFunction(planeZ)
 
+    # resample the gradient magnitude on isodurfaces (assicoate
+    # each vertex of the isosurfaces to corresponding gradient magnitude)
     probe = vtk.vtkProbeFilter()
-    probe.SetSourceConnection(gm.GetOutputPort()) #
+    probe.SetSourceConnection(gm.GetOutputPort())
     probe.SetInputConnection(clipperZ.GetOutputPort())
 
-    # TODO: make color map looks better
+    # define the color map
     colorTrans = vtk.vtkColorTransferFunction()
     colorTrans.SetColorSpaceToRGB()
     for c in colormap_data:
         colorTrans.AddRGBPoint(c[0], c[1], c[2], c[3])
-    # colorTrans.AddRGBPoint(0, 1, 1, 1)
-    # colorTrans.AddRGBPoint(2500, 1, 1, 1)
-    # colorTrans.AddRGBPoint(109404, 1, 0, 0)
 
-
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(probe.GetOutputPort())
-    mapper.SetLookupTable(colorTrans)
-
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
+    # color bar to display the color scale
     colorBar = vtk.vtkScalarBarActor()
     colorBar.SetOrientationToHorizontal()
     colorBar.SetLookupTable(colorTrans)
 
     colorBarWidget = vtk.vtkScalarBarWidget()
     colorBarWidget.SetScalarBarActor(colorBar)
+
+    # mapper and actor
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputConnection(probe.GetOutputPort())
+    mapper.SetLookupTable(colorTrans)
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
 
     return planeX, planeY, planeZ, actor, colorBarWidget
 
@@ -116,24 +146,20 @@ class IsosurfaceDemo(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.clipX = margs.clip[0]
-        self.clipY = margs.clip[1]
-        self.clipZ = margs.clip[2]
-
-        # ct_name = "vffeet-ct-small.vti"
-        # gm_name = "vffeet-gm-small.vti"
-
-        ct_name = margs.data
-        gm_name = margs.gradmag
+        self.clipX = margs.clip[0]          # default clipX position
+        self.clipY = margs.clip[1]          # default clipY position
+        self.clipZ = margs.clip[2]          # default clipZ position
+        ct_name = margs.data                # CT file name
+        gm_name = margs.gradmag             # gradient magnitude file name
 
         [self.planeX, self.planeY, self.planeZ, self.actor, self.colorBarWidget] = \
             make(ct_name, gm_name, isoValues, colormap)
+
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.actor)
         self.ren.SetBackground(0.75, 0.75, 0.75)
         self.ren.ResetCamera()
-        # self.ren.GetActiveCamera().Azimuth(180)
-        # self.ren.GetActiveCamera().Roll(180)
+
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
 
@@ -170,45 +196,45 @@ class IsosurfaceDemo(QMainWindow):
 
 
 if __name__ == "__main__":
+    # --define argument parser and parse arguments--
     parser = argparse.ArgumentParser()
     parser.add_argument('data')
     parser.add_argument('gradmag')
     parser.add_argument('isoVal')
-    parser.add_argument('--cmap', type=str, metavar='filename', help='input colormap file',
-                        default='NULL')
+    parser.add_argument('--cmap', type=str, metavar='filename', help='input colormap file', default='NULL')
     parser.add_argument('--clip', type=int, metavar='int', nargs=3,
-                        help='initial positions of clipping planes', default=[0, 0, 0])
-
+                        help='initial positions of clipping planes', default=DEFAULT_PLANE_POS)
     args = parser.parse_args()
 
-    # process colormap argument
-    default_colormap = [[0, 1, 1, 1], [2500, 1, 1, 1], [109404, 1, 0, 0]]
-    colormap = args.cmap
-    if colormap != 'NULL':
-        default_colormap.clear()
-        with open(colormap, 'r') as fd:
+    # --process colormap argument--
+    colormap = DEFAULT_COLORMAP
+    colormapFile = args.cmap
+    if colormapFile != 'NULL':
+        colormap.clear()
+        with open(colormapFile, 'r') as fd:
             lines = fd.read().splitlines()
             for line in lines:
                 if len(line) > 0 and line[0] != '#':
-                    l = [int(i) for i in line.split()]
-                    default_colormap.append(l)
-    # print(default_colormap)
+                    intline = [int(i) for i in line.split()]
+                    colormap.append(intline)
+    # print(colormap)
 
-    # process isovalue argument
+    # --process isovalue argument--
     isoValues = list()  # [550, 1349]
     with open(args.isoVal, 'r') as fd:
         line = fd.read().split()
         isoValues = [int(i) for i in line]
     # print(isoValues)
 
-    # main app
+    # --main app--
     app = QApplication(sys.argv)
-    window = IsosurfaceDemo(margs=args, colormap=default_colormap, isoValues=isoValues)
+    window = IsosurfaceDemo(margs=args, colormap=colormap, isoValues=isoValues)
     window.ui.vtkWidget.GetRenderWindow().SetSize(800, 800)
     window.show()
     window.setWindowState(Qt.WindowMaximized)
     window.iren.Initialize()
 
+    # --hook up callbacks--
     window.ui.slider_clipX.valueChanged.connect(window.clipX_callback)
     window.ui.slider_clipY.valueChanged.connect(window.clipY_callback)
     window.ui.slider_clipZ.valueChanged.connect(window.clipZ_callback)
