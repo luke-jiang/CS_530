@@ -49,14 +49,12 @@ def make(ct_name, gm_name, isoValues, colormap_data):
     gm.Update()
     # print(gm.GetOutput().GetPointData().GetArray(0).GetRange())  # Get data range
 
-    # extract isodurfaces given contour isovalues
+    # extract isosurfaces given contour isovalues
     ctContour = vtk.vtkContourFilter()
     i = 0
     for v in isoValues:
         ctContour.SetValue(i, v)
         i += 1
-    # ctContour.SetValue(0, 550)
-    # ctContour.SetValue(1, 1349)
     ctContour.SetInputConnection(ct.GetOutputPort())
 
     # three clipping planes
