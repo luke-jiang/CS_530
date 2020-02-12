@@ -4,13 +4,13 @@ import vtk
 import sys
 import argparse
 
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
-def make(ct_name, gm_name, contourVal):
+def make(ct_name, gm_name, contourVal, gradmin, gradmax):
     ct = vtk.vtkXMLImageDataReader()
     ct.SetFileName(ct_name)
     ct.Update()
@@ -50,12 +50,13 @@ def make(ct_name, gm_name, contourVal):
 
     minClip = vtk.vtkClipPolyData()
     minClip.SetInputConnection(probe.GetOutputPort())
-    minClip.SetValue(0)
+    minClip.InsideOutOff()
+    minClip.SetValue(gradmin)
 
     maxClip = vtk.vtkClipPolyData()
-    maxClip.SetInputConnection(probe.GetOutputPort())
+    maxClip.SetInputConnection(minClip.GetOutputPort())
     maxClip.InsideOutOn()
-    maxClip.SetValue(109404)
+    maxClip.SetValue(gradmax)
 
     # TODO: make color map looks better
     colorTrans = vtk.vtkColorTransferFunction()
@@ -112,10 +113,10 @@ class Ui_MainWindow(object):
         self.gridlayout.addWidget(QLabel("Isovalue"), 5, 2, 1, 1)
         self.gridlayout.addWidget(self.slider_contour, 5, 3, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("gradient max"), 6, 0, 1, 1)
+        self.gridlayout.addWidget(QLabel("Gradient Max"), 6, 0, 1, 1)
         self.gridlayout.addWidget(self.slider_gradmax, 6, 1, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("gradient min"), 6, 2, 1, 1)
+        self.gridlayout.addWidget(QLabel("Gradient Min"), 6, 2, 1, 1)
         self.gridlayout.addWidget(self.slider_gradmin, 6, 3, 1, 1)
 
         MainWindow.setCentralWidget(self.centralWidget)
@@ -139,7 +140,7 @@ class IsosurfaceDemo(QMainWindow):
         gm_name = margs.gradmag
 
         [self.contour, self.planeX, self.planeY, self.planeZ, self.minClip, self.maxClip,
-         self.actor, self.colorBarWidget] = make(ct_name, gm_name, self.contourVal)
+         self.actor, self.colorBarWidget] = make(ct_name, gm_name, self.contourVal, self.gradmin, self.gradmax)
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.actor)
         self.ren.SetBackground(0.75, 0.75, 0.75)
@@ -155,6 +156,7 @@ class IsosurfaceDemo(QMainWindow):
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
             slider.setValue(float(val))
+            # slider.setSliderPosition(int(val))
             slider.setTracking(False)
             slider.setTickInterval(interv)
             slider.setTickPosition(QSlider.TicksAbove)
@@ -163,9 +165,9 @@ class IsosurfaceDemo(QMainWindow):
         slider_setup(self.ui.slider_clipX, self.clipX, [0, 200], 5)
         slider_setup(self.ui.slider_clipY, self.clipY, [0, 200], 5)
         slider_setup(self.ui.slider_clipZ, self.clipZ, [0, 200], 5)
-        slider_setup(self.ui.slider_contour, self.contourVal, [500, 1500], 25)
-        slider_setup(self.ui.slider_gradmin, self.gradmin, [0, 54702], 1000)
-        slider_setup(self.ui.slider_gradmax, self.gradmax, [54702, 109404], 1000)
+        slider_setup(self.ui.slider_contour, self.contourVal/25, [500/25, 1500/25], 1)
+        slider_setup(self.ui.slider_gradmin, 0, [0, 109404/1000], 1)
+        slider_setup(self.ui.slider_gradmax, 109404/1000, [0, 109404/1000], 1)
 
 
     def clipX_callback(self, val):
@@ -184,18 +186,19 @@ class IsosurfaceDemo(QMainWindow):
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def contour_callback(self, val):
-        self.contourVal = val
+        print(val)
+        self.contourVal = val*25
         self.contour.SetValue(0, self.contourVal)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def gradmin_callback(self, val):
-        self.gradmin = val
-        self.minClip.SetValue(val)
+        self.gradmin = val*1000
+        self.minClip.SetValue(val*1000)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def gradmax_callback(self, val):
-        self.gradmax = val
-        self.maxClip.SetValue(val)
+        self.gradmax = val*1000
+        self.maxClip.SetValue(val*1000)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 
@@ -218,6 +221,7 @@ if __name__ == "__main__":
     window.setWindowState(Qt.WindowMaximized)
     window.iren.Initialize()
 
+    # --hook up callbacks--
     window.ui.slider_clipX.valueChanged.connect(window.clipX_callback)
     window.ui.slider_clipY.valueChanged.connect(window.clipY_callback)
     window.ui.slider_clipZ.valueChanged.connect(window.clipZ_callback)
