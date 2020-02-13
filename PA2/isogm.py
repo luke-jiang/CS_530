@@ -148,7 +148,7 @@ class IsosurfaceDemo(QMainWindow):
         self.clipY = margs.clip[1]          # default clipY position
         self.clipZ = margs.clip[2]          # default clipZ position
         ct_name = margs.data                # CT file name
-        gm_name = margs.gradmag             # gradient magnitude file name
+        gm_name = margs.gradmag
 
         [self.planeX, self.planeY, self.planeZ, self.actor, self.colorBarWidget] = \
             make(ct_name, gm_name, isoValues, colormap)
@@ -173,6 +173,7 @@ class IsosurfaceDemo(QMainWindow):
             slider.setTickPosition(QSlider.TicksAbove)
             slider.setRange(bounds[0], bounds[1])
 
+        # define range and initial value for each slider bar
         slider_setup(self.ui.slider_clipX, self.clipX, [0, 200], 5)
         slider_setup(self.ui.slider_clipY, self.clipY, [0, 200], 5)
         slider_setup(self.ui.slider_clipZ, self.clipZ, [0, 200], 5)
