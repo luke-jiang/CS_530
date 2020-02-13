@@ -1,5 +1,23 @@
 #!/usr/bin/env python
 
+# CS 530
+# Project 2 Task 3
+# Luke Jiang
+# 02/13/2020
+
+""" Description:
+Use the gradient magnitude data to filter out unwanted portions of your isosurfaces.
+Use two vtkClipData filters, one for gradmax and one for gradmin
+
+Command line interface: python iso2dtf.py <data> <gradma> [--val <val>] [--clip <X> <Y> <Z>]
+    <data>:     3D scalar dataset to visualize
+    <gradma>:   gradient magnitide
+    <val>:      initial isocontour value (optional)
+    <X>:        initial position of the clipping plane in x-axis (optional)
+    <Y>:        initial position of the clipping plane in y-axis (optional)
+    <Z>:        initial position of the clipping plane in z-axis (optional)
+"""
+
 import vtk
 import sys
 import argparse
@@ -8,6 +26,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLa
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+
+GRAD_MAX = 109404           # maximum of gradient magnitude dataset
 
 
 def make(ct_name, gm_name, contourVal, gradmin, gradmax):
@@ -129,18 +149,18 @@ class IsosurfaceDemo(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.clipX = margs.clip[0]
-        self.clipY = margs.clip[1]
-        self.clipZ = margs.clip[2]
-        self.contourVal = margs.val
-        self.gradmin = 0
-        self.gradmax = 109404
-
-        ct_name = margs.data
-        gm_name = margs.gradmag
+        self.clipX = margs.clip[0]          # default clipX position
+        self.clipY = margs.clip[1]          # default clipY position
+        self.clipZ = margs.clip[2]          # default clipZ position
+        self.contourVal = margs.val         # default isosurface value
+        self.gradmin = 0                    # default minimum gradient
+        self.gradmax = GRAD_MAX             # default maximum gradient
+        ct_name = margs.data                # CT file name
+        gm_name = margs.gradmag             # gradient magnitude file name
 
         [self.contour, self.planeX, self.planeY, self.planeZ, self.minClip, self.maxClip,
          self.actor, self.colorBarWidget] = make(ct_name, gm_name, self.contourVal, self.gradmin, self.gradmax)
+
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.actor)
         self.ren.SetBackground(0.75, 0.75, 0.75)
@@ -156,18 +176,18 @@ class IsosurfaceDemo(QMainWindow):
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
             slider.setValue(float(val))
-            # slider.setSliderPosition(int(val))
             slider.setTracking(False)
             slider.setTickInterval(interv)
             slider.setTickPosition(QSlider.TicksAbove)
             slider.setRange(bounds[0], bounds[1])
 
+        # define range and initial value for each slider bar
         slider_setup(self.ui.slider_clipX, self.clipX, [0, 200], 5)
         slider_setup(self.ui.slider_clipY, self.clipY, [0, 200], 5)
         slider_setup(self.ui.slider_clipZ, self.clipZ, [0, 200], 5)
         slider_setup(self.ui.slider_contour, self.contourVal/25, [500/25, 1500/25], 1)
-        slider_setup(self.ui.slider_gradmin, 0, [0, 109404/1000], 1)
-        slider_setup(self.ui.slider_gradmax, 109404/1000, [0, 109404/1000], 1)
+        slider_setup(self.ui.slider_gradmin, 0, [0, GRAD_MAX/1000], 1)
+        slider_setup(self.ui.slider_gradmax, GRAD_MAX/1000, [0, GRAD_MAX/1000], 1)
 
 
     def clipX_callback(self, val):
@@ -202,18 +222,17 @@ class IsosurfaceDemo(QMainWindow):
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 
-
 if __name__ == "__main__":
+    # --define argument parser and parse arguments--
     parser = argparse.ArgumentParser()
     parser.add_argument('data')
     parser.add_argument('gradmag')
     parser.add_argument('--val', type=int, metavar='int', default=500)
     parser.add_argument('--clip', type=int, metavar='int', nargs=3,
                         help='initial positions of clipping planes', default=[0, 0, 0])
-
     args = parser.parse_args()
 
-    # main app
+    # --main app--
     app = QApplication(sys.argv)
     window = IsosurfaceDemo(margs=args)
     window.ui.vtkWidget.GetRenderWindow().SetSize(800, 800)
