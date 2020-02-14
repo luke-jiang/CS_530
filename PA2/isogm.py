@@ -20,6 +20,9 @@ Command line interface: python isogm.py <data> <gradmag> <isoval> [--cmap <color
 
 """ Observations:
 The bones have low gradient magnitude, the skin has high gradient magnitude, muscles in between.
+    bones:      [0, 72000]
+    muscle:     [10000, 49000]
+    skin:       [19000, 69000]
 """
 
 
