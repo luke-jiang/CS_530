@@ -9,6 +9,16 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+"""
+Command line interface: python isocomplete.py <data> <gradma> <params> [--clip <X> <Y> <Z>]
+    <data>:     3D scalar dataset to visualize
+    <gradma>:   gradient magnitide
+    <params>:   the file containing all the information necessary to visualize the isosurfaces.
+    <X>:        initial position of the clipping plane in x-axis (optional)
+    <Y>:        initial position of the clipping plane in y-axis (optional)
+    <Z>:        initial position of the clipping plane in z-axis (optional)    
+"""
+
 GRAD_MAX = 109404           # maximum of gradient magnitude dataset
 
 DATA = [[800, 19000, 69000, 197, 140, 133],
@@ -134,7 +144,8 @@ class IsosurfaceDemo(QMainWindow):
         ct_name = margs.data                # CT file name
         gm_name = margs.gradmag             # gradient magnitude file name
 
-        [self.contour, self.planeX, self.planeY, self.planeZ, self.actor] = make(ct_name, gm_name, data)
+        [self.contour, self.planeX, self.planeY, self.planeZ, self.actor] = \
+            make(ct_name, gm_name, data)
 
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.actor)
@@ -186,10 +197,20 @@ if __name__ == "__main__":
                         help='initial positions of clipping planes', default=[0, 0, 0])
     args = parser.parse_args()
 
+    # --parse params data--
+    data = list()
+    params = args.params
+    with open(params, 'r') as fd:
+        lines = fd.read().splitlines()
+        for line in lines:
+            if len(line) > 0 and line[0] != '#':
+                intline = [int(i) for i in line.split()]
+                data.append(intline)
+    # print(data)
 
     # --main app--
     app = QApplication(sys.argv)
-    window = IsosurfaceDemo(margs=args, data=DATA)
+    window = IsosurfaceDemo(margs=args, data=data)
     window.ui.vtkWidget.GetRenderWindow().SetSize(800, 800)
     window.show()
     window.setWindowState(Qt.WindowMaximized)
