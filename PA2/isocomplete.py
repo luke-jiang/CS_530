@@ -1,5 +1,20 @@
 #!/usr/bin/env python
 
+# CS 530
+# Project 2 Task 4
+# Luke Jiang
+# 02/14/2020
+
+"""
+Command line interface: python isocomplete.py <data> <gradma> <params> [--clip <X> <Y> <Z>]
+    <data>:     3D scalar dataset to visualize
+    <gradma>:   gradient magnitide
+    <params>:   the file containing all the information necessary to visualize the isosurfaces.
+    <X>:        initial position of the clipping plane in x-axis (optional)
+    <Y>:        initial position of the clipping plane in y-axis (optional)
+    <Z>:        initial position of the clipping plane in z-axis (optional)
+"""
+
 import vtk
 import sys
 import argparse
@@ -9,24 +24,20 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-"""
-Command line interface: python isocomplete.py <data> <gradma> <params> [--clip <X> <Y> <Z>]
-    <data>:     3D scalar dataset to visualize
-    <gradma>:   gradient magnitide
-    <params>:   the file containing all the information necessary to visualize the isosurfaces.
-    <X>:        initial position of the clipping plane in x-axis (optional)
-    <Y>:        initial position of the clipping plane in y-axis (optional)
-    <Z>:        initial position of the clipping plane in z-axis (optional)    
-"""
+
 
 GRAD_MAX = 109404           # maximum of gradient magnitude dataset
+DATA = [[800, 19000, 69000, 197, 140, 133, 0.5],
+        [1100, 10000, 49000, 204, 71, 62, 0.7],
+        [1300, 0, 72000, 230, 230, 230, 1.0]]
 
-DATA = [[800, 19000, 69000, 197, 140, 133],
-        [1100, 10000, 49000, 204, 71, 62],
-        [1300, 0, 72000, 230, 230, 230]]
 
-
-def make(ct_name, gm_name, data):
+def makeBasic(ct_name, gm_name):
+    """
+    Read two datasets, create three plane clip functions and the renderer
+    :param ct_name: file name of CT dataset
+    :param gm_name: file name of gradient magnitude dataset
+    """
     ct = vtk.vtkXMLImageDataReader()
     ct.SetFileName(ct_name)
     ct.Update()
@@ -35,78 +46,87 @@ def make(ct_name, gm_name, data):
     gm.SetFileName(gm_name)
     gm.Update()
 
-    ctContour = vtk.vtkContourFilter()
-    i = 0
-    for d in data:
-        ctContour.SetValue(i, d[0])
-        i += 1
-    ctContour.SetInputConnection(ct.GetOutputPort())
-
     planeX = vtk.vtkPlane()
     planeX.SetOrigin(0, 0, 0)
     planeX.SetNormal(1.0, 0, 0)
-    clipperX = vtk.vtkClipPolyData()
-    clipperX.SetInputConnection(ctContour.GetOutputPort())
-    clipperX.SetClipFunction(planeX)
 
     planeY = vtk.vtkPlane()
     planeY.SetOrigin(0, 0, 0)
     planeY.SetNormal(0, 1.0, 0)
-    clipperY = vtk.vtkClipPolyData()
-    clipperY.SetInputConnection(clipperX.GetOutputPort())
-    clipperY.SetClipFunction(planeY)
 
     planeZ = vtk.vtkPlane()
     planeZ.SetOrigin(0, 0, 0)
     planeZ.SetNormal(0, 0, 1.0)
-    clipperZ = vtk.vtkClipPolyData()
-    clipperZ.SetInputConnection(clipperY.GetOutputPort())
-    clipperZ.SetClipFunction(planeZ)
 
-    probe = vtk.vtkProbeFilter()
-    probe.SetSourceConnection(gm.GetOutputPort())
-    probe.SetInputConnection(clipperZ.GetOutputPort())
-
-
-    # minClip = vtk.vtkClipPolyData()
-    # minClip.SetInputConnection(probe.GetOutputPort())
-    # minClip.InsideOutOff()
-    # for d in data:
-    #     minClip.SetValue(d[1])
-    #
-    # maxClip = vtk.vtkClipPolyData()
-    # maxClip.SetInputConnection(minClip.GetOutputPort())
-    # maxClip.InsideOutOn()
-    # for d in data:
-    #     maxClip.SetValue(d[2])
-
-    # TODO: make color map looks better
-    colorTrans = vtk.vtkColorTransferFunction()
-    colorTrans.SetColorSpaceToRGB()
-    for d in data:
-        colorTrans.AddRGBPoint(d[0], d[3]/256, d[4]/256, d[5]/256)
-
-
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(clipperZ.GetOutputPort())
-    mapper.SetLookupTable(colorTrans)
-
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    # colorBar = vtk.vtkScalarBarActor()
-    # colorBar.SetOrientationToHorizontal()
-    # colorBar.SetLookupTable(colorTrans)
-    #
-    # colorBarWidget = vtk.vtkScalarBarWidget()
-    # colorBarWidget.SetScalarBarActor(colorBar)
-
+    # enable depth peeling in renderer
     ren = vtk.vtkRenderer()
-    ren.AddActor(actor)
     ren.SetBackground(0.75, 0.75, 0.75)
+    ren.SetUseDepthPeeling(1)
+    ren.SetMaximumNumberOfPeels(100)
+    ren.SetOcclusionRatio(0.4)
     ren.ResetCamera()
 
-    return ctContour, planeX, planeY, planeZ, ren
+    return ct, gm, [planeX, planeY, planeZ], ren
+
+
+def make(ct, gm, planes, data):
+    """
+    make pipeline for each isovalue
+    :param planes: plane clip functions
+    :param data: content in "params" given by the user
+    :return: a list of actors to be added to the renderer
+    """
+    actors = list()
+    i = 0
+
+    for [isoValue, gradmin, gradmax, colorR, colorG, colorB, opacity] in data:
+
+        ctContour = vtk.vtkContourFilter()
+        ctContour.SetValue(i, isoValue)
+        ctContour.SetInputConnection(ct.GetOutputPort())
+
+        clipperX = vtk.vtkClipPolyData()
+        clipperX.SetInputConnection(ctContour.GetOutputPort())
+        clipperX.SetClipFunction(planes[0])
+
+        clipperY = vtk.vtkClipPolyData()
+        clipperY.SetInputConnection(clipperX.GetOutputPort())
+        clipperY.SetClipFunction(planes[1])
+
+        clipperZ = vtk.vtkClipPolyData()
+        clipperZ.SetInputConnection(clipperY.GetOutputPort())
+        clipperZ.SetClipFunction(planes[2])
+
+        probe = vtk.vtkProbeFilter()
+        probe.SetSourceConnection(gm.GetOutputPort())
+        probe.SetInputConnection(clipperZ.GetOutputPort())
+
+        minClip = vtk.vtkClipPolyData()
+        minClip.SetInputConnection(probe.GetOutputPort())
+        minClip.InsideOutOff()
+        minClip.SetValue(gradmin)
+
+        maxClip = vtk.vtkClipPolyData()
+        maxClip.SetInputConnection(minClip.GetOutputPort())
+        maxClip.InsideOutOn()
+        maxClip.SetValue(gradmax)
+
+        colorTrans = vtk.vtkColorTransferFunction()
+        colorTrans.SetColorSpaceToRGB()
+        colorTrans.AddRGBPoint(isoValue, colorR/256, colorG/256, colorB/256)
+
+        mapper = vtk.vtkDataSetMapper()
+        mapper.SetInputConnection(maxClip.GetOutputPort())
+        mapper.SetLookupTable(colorTrans)
+
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetOpacity(opacity)
+        actors.append(actor)
+
+        i += 1
+
+    return actors
 
 
 class Ui_MainWindow(object):
@@ -149,10 +169,15 @@ class IsosurfaceDemo(QMainWindow):
         ct_name = margs.data                # CT file name
         gm_name = margs.gradmag             # gradient magnitude file name
 
-        [self.contour, self.planeX, self.planeY, self.planeZ, self.ren] = \
-            make(ct_name, gm_name, data)
+        ct, gm, self.planes, self.ren = makeBasic(ct_name, gm_name)
+        actors = make(ct, gm, self.planes, data)
+        for actor in actors:
+            self.ren.AddActor(actor)
 
+        # enable depth peeling
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
+        self.ui.vtkWidget.GetRenderWindow().SetAlphaBitPlanes(True)
+        self.ui.vtkWidget.GetRenderWindow().SetMultiSamples(0)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
 
 
@@ -172,17 +197,17 @@ class IsosurfaceDemo(QMainWindow):
 
     def clipX_callback(self, val):
         self.clipX = val
-        self.planeX.SetOrigin(val, 0, 0)
+        self.planes[0].SetOrigin(val, 0, 0)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def clipY_callback(self, val):
         self.clipY = val
-        self.planeY.SetOrigin(0, val, 0)
+        self.planes[1].SetOrigin(0, val, 0)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def clipZ_callback(self, val):
         self.clipZ = val
-        self.planeZ.SetOrigin(0, 0, val)
+        self.planes[2].SetOrigin(0, 0, val)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 
@@ -204,7 +229,7 @@ if __name__ == "__main__":
         lines = fd.read().splitlines()
         for line in lines:
             if len(line) > 0 and line[0] != '#':
-                intline = [int(i) for i in line.split()]
+                intline = [float(i) for i in line.split()]
                 data.append(intline)
     # print(data)
 
