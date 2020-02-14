@@ -101,7 +101,12 @@ def make(ct_name, gm_name, data):
     # colorBarWidget = vtk.vtkScalarBarWidget()
     # colorBarWidget.SetScalarBarActor(colorBar)
 
-    return ctContour, planeX, planeY, planeZ, actor
+    ren = vtk.vtkRenderer()
+    ren.AddActor(actor)
+    ren.SetBackground(0.75, 0.75, 0.75)
+    ren.ResetCamera()
+
+    return ctContour, planeX, planeY, planeZ, ren
 
 
 class Ui_MainWindow(object):
@@ -144,13 +149,8 @@ class IsosurfaceDemo(QMainWindow):
         ct_name = margs.data                # CT file name
         gm_name = margs.gradmag             # gradient magnitude file name
 
-        [self.contour, self.planeX, self.planeY, self.planeZ, self.actor] = \
+        [self.contour, self.planeX, self.planeY, self.planeZ, self.ren] = \
             make(ct_name, gm_name, data)
-
-        self.ren = vtk.vtkRenderer()
-        self.ren.AddActor(self.actor)
-        self.ren.SetBackground(0.75, 0.75, 0.75)
-        self.ren.ResetCamera()
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
