@@ -79,7 +79,7 @@ def make(ct_name, gm_name, isoValues, colormap_data):
     clipperZ.SetInputConnection(clipperY.GetOutputPort())
     clipperZ.SetClipFunction(planeZ)
 
-    # resample the gradient magnitude on isodurfaces (assicoate
+    # resample the gradient magnitude on isosurfaces (assicoate
     # each vertex of the isosurfaces to corresponding gradient magnitude)
     probe = vtk.vtkProbeFilter()
     probe.SetSourceConnection(gm.GetOutputPort())
