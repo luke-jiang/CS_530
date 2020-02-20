@@ -206,17 +206,19 @@ class IsosurfaceDemo(QMainWindow):
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def contour_callback(self, val):
-        print(val)
+        print("contour: " + str(val*25))
         self.contourVal = val*25
         self.contour.SetValue(0, self.contourVal)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def gradmin_callback(self, val):
+        print("gradmin: " + str(val*1000))
         self.gradmin = val*1000
         self.minClip.SetValue(val*1000)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def gradmax_callback(self, val):
+        print("gradmax: " + str(val*1000))
         self.gradmax = val*1000
         self.maxClip.SetValue(val*1000)
         self.ui.vtkWidget.GetRenderWindow().Render()
