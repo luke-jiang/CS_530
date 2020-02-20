@@ -8,11 +8,11 @@
 """
 Command line interface: python isocomplete.py <data> <gradma> <params> [--clip <X> <Y> <Z>]
     <data>:     3D scalar dataset to visualize
-    <gradma>:   gradient magnitide
+    <gradma>:   gradient magnitude
     <params>:   the file containing all the information necessary to visualize the isosurfaces.
     <X>:        initial position of the clipping plane in x-axis (optional)
     <Y>:        initial position of the clipping plane in y-axis (optional)
-    <Z>:        initial position of the clipping plane in z-axis (optional)
+    <Z>:        ipythnitial position of the clipping plane in z-axis (optional)
 """
 
 import vtk
@@ -25,11 +25,10 @@ from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
-
 GRAD_MAX = 109404           # maximum of gradient magnitude dataset
-DATA = [[800, 19000, 69000, 197, 140, 133, 0.5],
-        [1100, 10000, 49000, 204, 71, 62, 0.7],
-        [1300, 0, 72000, 230, 230, 230, 1.0]]
+DATA = [[800, 19000, 69000, 197, 140, 133, 0.5],        # skin
+        [1100, 10000, 49000, 204, 71, 62, 0.7],         # muscle
+        [1300, 0, 72000, 230, 230, 230, 1.0]]           # bone
 
 
 def makeBasic(ct_name, gm_name):
@@ -209,7 +208,6 @@ class IsosurfaceDemo(QMainWindow):
         self.clipZ = val
         self.planes[2].SetOrigin(0, 0, val)
         self.ui.vtkWidget.GetRenderWindow().Render()
-
 
 
 if __name__ == "__main__":
