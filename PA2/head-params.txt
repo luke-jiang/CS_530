@@ -1,0 +1,10 @@
+# sample file containing all the information necessary to select,
+# filter, and visualize the isosurfaces.
+
+# work for small dataset
+
+# format: <isovalue> <grad_min> <grad_max> <R> <G> <B> <alpha>
+
+625     17000       99000       197     140     133     0.7
+1100    12000       50000       204     71      62      0.9
+1300    0           72000       230     230     230     1.0
