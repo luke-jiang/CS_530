@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 # CS 530
-# Project 2 Task 1
+# Project 3 Task 1
 # Luke Jiang
-# 02/11/2020
+# 02/21/2020
 
 """ Description:
-Display the CT dataset using isosurfacing while supporting interactive
-    modification of the corresponding isovalue.
-Use three clipping planes for each dimension to show internal details.
+Find and display salient isosurfaces of the head dataset
+(namely, boundaries between skin, muscle, and skull)
 
 Command line interface: python isosurface.py <head.vti>
     <data>:     head scalar dataset to visualize
@@ -29,12 +28,13 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-
+# valid range of isovalues
 INIT_CONTOUR_VAL = 700
 MAX_CONTOUR_VAL = 1200
 
-REN_DATA = [[1020, 197, 140, 133, 0.7],
-            [1080, 230, 230, 230, 0.9]]
+REN_DATA = [[980, 197, 140, 133, 0.8],
+            [1080, 230, 230, 230, 0.95]]
+
 
 def makeBasic(filename):
     # read the head image
@@ -74,7 +74,7 @@ def make(reader, renData):
     actor.SetMapper(mapper)
     actor.GetProperty().SetOpacity(opacity)
 
-    return actor
+    return contour, actor
 
 
 class Ui_MainWindow(object):
@@ -86,12 +86,24 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
-        self.slider_contour = QSlider()
+        self.slider_contour0 = QSlider()
+        self.slider_contour1 = QSlider()
+        self.slider_opacity0 = QSlider()
+        self.slider_opacity1 = QSlider()
 
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
 
-        self.gridlayout.addWidget(QLabel("Contour Value"), 4, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider_contour, 4, 1, 1, 1)
+        self.gridlayout.addWidget(QLabel("Contour0 Value"), 4, 0, 1, 1)
+        self.gridlayout.addWidget(self.slider_contour0, 4, 1, 1, 1)
+
+        self.gridlayout.addWidget(QLabel("Contour1 Value"), 4, 2, 1, 1)
+        self.gridlayout.addWidget(self.slider_contour1, 4, 3, 1, 1)
+
+        self.gridlayout.addWidget(QLabel("Contour0 Opacity"), 5, 0, 1, 1)
+        self.gridlayout.addWidget(self.slider_opacity0, 5, 1, 1, 1)
+
+        self.gridlayout.addWidget(QLabel("Contour1 Opacity"), 5, 2, 1, 1)
+        self.gridlayout.addWidget(self.slider_opacity1, 5, 3, 1, 1)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -107,10 +119,13 @@ class IsosurfaceDemo(QMainWindow):
         self.contourVal = INIT_CONTOUR_VAL   # initial contour value
 
         self.reader, self.ren = makeBasic(filename)
-
+        self.contours = list()
+        self.actors = list()
         for d in REN_DATA:
-            actor = make(self.reader, d)
+            contour, actor = make(self.reader, d)
             self.ren.AddActor(actor)
+            self.actors.append(actor)
+            self.contours.append(contour)
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
@@ -123,12 +138,33 @@ class IsosurfaceDemo(QMainWindow):
             slider.setTickPosition(QSlider.TicksAbove)
             slider.setRange(bounds[0], bounds[1])
 
-        slider_setup(self.ui.slider_contour, self.contourVal, [INIT_CONTOUR_VAL, MAX_CONTOUR_VAL], 10)
+        # need to adjust the range of slide bars because the initial position of widget would be wrong
+        # if init val > 100
+        slider_contour_range = [0, (MAX_CONTOUR_VAL - INIT_CONTOUR_VAL) / 10]
+        slider_setup(self.ui.slider_contour0, (REN_DATA[0][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
+        slider_setup(self.ui.slider_contour1, (REN_DATA[1][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
+        slider_setup(self.ui.slider_opacity0, REN_DATA[0][4]*10, [0, 10], 1)
+        slider_setup(self.ui.slider_opacity1, REN_DATA[1][4]*10, [0, 10], 1)
 
-    def contour_callback(self, val):
-        print(val)
-        self.contourVal = val
-        self.contour.SetValue(0, self.contourVal)
+
+    def contour0_callback(self, val):
+        cval = val * 10 + INIT_CONTOUR_VAL
+        print("contour0: " + str(cval))
+        self.contours[0].SetValue(0, cval)
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def contour1_callback(self, val):
+        cval = val * 10 + INIT_CONTOUR_VAL
+        print("contour1: " + str(cval))
+        self.contours[1].SetValue(0, cval)
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def opacity0_callback(self, val):
+        self.actors[0].GetProperty().SetOpacity(val / 10)
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def opacity1_callback(self, val):
+        self.actors[1].GetProperty().SetOpacity(val / 10)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 
@@ -149,6 +185,9 @@ if __name__ == "__main__":
     window.iren.Initialize()
 
     # --hook up callbacks--
-    # window.ui.slider_contour.valueChanged.connect(window.contour_callback)
+    window.ui.slider_contour0.valueChanged.connect(window.contour0_callback)
+    window.ui.slider_contour1.valueChanged.connect(window.contour1_callback)
+    window.ui.slider_opacity0.valueChanged.connect(window.opacity0_callback)
+    window.ui.slider_opacity1.valueChanged.connect(window.opacity1_callback)
 
     sys.exit(app.exec_())
