@@ -17,6 +17,9 @@ Identify salient isovalues:
     sheet structure to tubular:    9000    
 """
 
+# 92 99 223  blue   low isovalue
+# 220 30 53  red    high isovalue
+
 import vtk
 import sys
 import argparse
@@ -28,11 +31,34 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
 INIT_CONTOUR_VAL = 1000
-MAX_CONTOUR_VAL = 80000
+MAX_CONTOUR_VAL = 65000
 
-REN_DATA = [[980, 197, 140, 133, 0.8],
-            [1080, 230, 230, 230, 0.95]]
+# REN_DATA = [[9000, 112, 123, 223, 0.5],
+#             [49000, 220, 30, 53, 0.5]]
 
+# REN_DATA = [[32000, 87,  86,  124, 0.5],
+#             [35000, 108, 115, 128, 0.4],
+#             [38000, 201, 62,  71,  0.3],
+#             [41000, 240, 94,  82,  0.2],
+#             [42000, 212, 149, 150, 0.1]]
+
+# REN_DATA = [[32000, 45,  119,  247, 0.5],
+#             [35000, 189, 212, 252, 0.4],
+#             [38000, 247, 20,  20,  0.3],
+#             [41000, 286, 130, 130,  0.3],
+#             [42000, 225, 240, 240, 0.3]]
+
+REN_DATA1 = [[32000, 87,  86,  124, 0],
+            [35000, 108, 115, 128, 0],
+            [31000, 201, 62,  71,  0.3],
+            [41000, 240, 94,  82,  0.4],
+            [51000, 252, 175, 175, 0.7]]
+
+REN_DATA = [[32000, 50,  50,  255, 0.3],
+            [35000, 100, 100, 255, 0.2],
+            [41000, 255, 242,  242,  0.5], # 0.7
+            # [46000, 255, 150, 150, 0.4],  # 0.6
+            [51000, 255, 27, 27, 0.3]]  #0.5
 
 def makeBasic(filename):
     # read the head image
@@ -44,8 +70,8 @@ def makeBasic(filename):
     ren = vtk.vtkRenderer()
     ren.SetBackground(0.75, 0.75, 0.75)
     ren.SetUseDepthPeeling(1)
-    ren.SetMaximumNumberOfPeels(100)
-    ren.SetOcclusionRatio(0.4)
+    ren.SetMaximumNumberOfPeels(50)
+    ren.SetOcclusionRatio(0)
     ren.ResetCamera()
 
     return reader, ren
@@ -62,6 +88,7 @@ def make(reader, renData):
     colorTrans = vtk.vtkColorTransferFunction()
     colorTrans.SetColorSpaceToRGB()
     colorTrans.AddRGBPoint(isoValue, R/256, G/256, B/256)
+    # colorTrans.AddRGBPoint(isoValue+1000, (R+10)/256, (G+10)/256, (B+10)/256)
 
     # mapper and actor
     mapper = vtk.vtkDataSetMapper()
@@ -94,7 +121,7 @@ def basic(reader):
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName('The Main Window')
-        MainWindow.setWindowTitle('salient_head')
+        MainWindow.setWindowTitle('salient_flame')
 
         self.centralWidget = QWidget(MainWindow)
         self.gridlayout = QGridLayout(self.centralWidget)
@@ -136,10 +163,11 @@ class IsosurfaceDemo(QMainWindow):
         self.contours = list()
         self.actors = list()
 
-        contour, actor = basic(self.reader)
-        self.ren.AddActor(actor)
-        self.actors.append(actor)
-        self.contours.append(contour)
+        for d in REN_DATA:
+            contour, actor = make(self.reader, d)
+            self.ren.AddActor(actor)
+            self.actors.append(actor)
+            self.contours.append(contour)
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
@@ -155,30 +183,30 @@ class IsosurfaceDemo(QMainWindow):
         # need to adjust the range of slide bars because the initial position of widget would be wrong
         # if init val > 100
         slider_contour_range = [0, (MAX_CONTOUR_VAL - INIT_CONTOUR_VAL) / 1000]
-        slider_setup(self.ui.slider_contour0, 1, slider_contour_range, 1)
-        slider_setup(self.ui.slider_contour1, (REN_DATA[1][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
-        slider_setup(self.ui.slider_opacity0, REN_DATA[0][4]*10, [0, 10], 1)
-        slider_setup(self.ui.slider_opacity1, REN_DATA[1][4]*10, [0, 10], 1)
+        slider_setup(self.ui.slider_contour0, (REN_DATA[2][0] - INIT_CONTOUR_VAL)/1000, slider_contour_range, 1)
+        slider_setup(self.ui.slider_contour1, (REN_DATA[3][0] - INIT_CONTOUR_VAL)/1000, slider_contour_range, 1)
+        slider_setup(self.ui.slider_opacity0, REN_DATA[2][4]*10, [0, 10], 1)
+        slider_setup(self.ui.slider_opacity1, REN_DATA[3][4]*10, [0, 10], 1)
 
 
     def contour0_callback(self, val):
         cval = val * 1000 + INIT_CONTOUR_VAL
         print("contour0: " + str(cval))
-        self.contours[0].SetValue(0, cval)
+        self.contours[2].SetValue(0, cval)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def contour1_callback(self, val):
-        cval = val * 10 + INIT_CONTOUR_VAL
+        cval = val * 1000 + INIT_CONTOUR_VAL
         print("contour1: " + str(cval))
-        self.contours[1].SetValue(0, cval)
+        self.contours[3].SetValue(0, cval)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def opacity0_callback(self, val):
-        self.actors[0].GetProperty().SetOpacity(val / 10)
+        self.actors[2].GetProperty().SetOpacity(val / 10)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def opacity1_callback(self, val):
-        self.actors[1].GetProperty().SetOpacity(val / 10)
+        self.actors[3].GetProperty().SetOpacity(val / 10)
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 
@@ -200,8 +228,8 @@ if __name__ == "__main__":
 
     # --hook up callbacks--
     window.ui.slider_contour0.valueChanged.connect(window.contour0_callback)
-    # window.ui.slider_contour1.valueChanged.connect(window.contour1_callback)
-    # window.ui.slider_opacity0.valueChanged.connect(window.opacity0_callback)
-    # window.ui.slider_opacity1.valueChanged.connect(window.opacity1_callback)
+    window.ui.slider_contour1.valueChanged.connect(window.contour1_callback)
+    window.ui.slider_opacity0.valueChanged.connect(window.opacity0_callback)
+    window.ui.slider_opacity1.valueChanged.connect(window.opacity1_callback)
 
     sys.exit(app.exec_())
