@@ -32,8 +32,10 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 INIT_CONTOUR_VAL = 700
 MAX_CONTOUR_VAL = 1200
 
-REN_DATA = [[980, 197, 140, 133, 0.8],
-            [1080, 230, 230, 230, 0.95]]
+# [isovalue, R, G, B, opacity]
+REN_DATA = [[1010, 197, 140, 133, 0.4],
+            [1080, 230, 230, 230, 1.0]]
+
 
 
 def makeBasic(filename):
@@ -117,6 +119,7 @@ class IsosurfaceDemo(QMainWindow):
 
         filename = margs.file                # head dataset file name
         self.contourVal = INIT_CONTOUR_VAL   # initial contour value
+        self.frame_counter = 0
 
         self.reader, self.ren = makeBasic(filename)
         self.contours = list()
@@ -129,6 +132,7 @@ class IsosurfaceDemo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+        self.iren.AddObserver("KeyPressEvent", self.key_pressed_callback)
 
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
@@ -145,7 +149,6 @@ class IsosurfaceDemo(QMainWindow):
         slider_setup(self.ui.slider_contour1, (REN_DATA[1][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
         slider_setup(self.ui.slider_opacity0, REN_DATA[0][4]*10, [0, 10], 1)
         slider_setup(self.ui.slider_opacity1, REN_DATA[1][4]*10, [0, 10], 1)
-
 
     def contour0_callback(self, val):
         cval = val * 10 + INIT_CONTOUR_VAL
@@ -166,6 +169,29 @@ class IsosurfaceDemo(QMainWindow):
     def opacity1_callback(self, val):
         self.actors[1].GetProperty().SetOpacity(val / 10)
         self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def key_pressed_callback(self, obj, event):
+        key = obj.GetKeySym()
+        if key == "s":
+            # save frame
+            file_name = "salient_head_frame" + str(self.frame_counter).zfill(5) + ".png"
+            window = self.ui.vtkWidget.GetRenderWindow()
+            image = vtk.vtkWindowToImageFilter()
+            image.SetInput(window)
+            png_writer = vtk.vtkPNGWriter()
+            png_writer.SetInputConnection(image.GetOutputPort())
+            png_writer.SetFileName(file_name)
+            window.Render()
+            png_writer.Write()
+            self.frame_counter += 1
+        elif key == "c":
+            # print camera setting
+            camera = self.ren.GetActiveCamera()
+            print("Camera settings:")
+            print("  * position:        %s" % (camera.GetPosition(),))
+            print("  * focal point:     %s" % (camera.GetFocalPoint(),))
+            print("  * up vector:       %s" % (camera.GetViewUp(),))
+            print("  * clipping range:  %s" % (camera.GetClippingRange(),))
 
 
 if __name__ == "__main__":
