@@ -14,8 +14,7 @@ Command line interface: python isoflame.py <flame.vti>
 
 """ Observations:
 Identify salient isovalues:
-    Head-to-Muscle:     1020
-    Muscle-to-Bone:     1080
+    sheet structure to tubular:    9000    
 """
 
 import vtk
@@ -29,7 +28,7 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
 INIT_CONTOUR_VAL = 1000
-MAX_CONTOUR_VAL = 65000
+MAX_CONTOUR_VAL = 80000
 
 REN_DATA = [[980, 197, 140, 133, 0.8],
             [1080, 230, 230, 230, 0.95]]
