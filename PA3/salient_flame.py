@@ -158,6 +158,7 @@ class IsosurfaceDemo(QMainWindow):
 
         filename = margs.file                # flame dataset file name
         self.contourVal = INIT_CONTOUR_VAL   # initial contour value
+        self.frame_counter = 0
 
         self.reader, self.ren = makeBasic(filename)
         self.contours = list()
@@ -171,6 +172,7 @@ class IsosurfaceDemo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+        self.iren.AddObserver("KeyPressEvent", self.key_pressed_callback)
 
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
@@ -208,6 +210,29 @@ class IsosurfaceDemo(QMainWindow):
     def opacity1_callback(self, val):
         self.actors[3].GetProperty().SetOpacity(val / 10)
         self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def key_pressed_callback(self, obj, event):
+        key = obj.GetKeySym()
+        if key == "s":
+            # save frame
+            file_name = "salient_flame_frame" + str(self.frame_counter).zfill(5) + ".png"
+            window = self.ui.vtkWidget.GetRenderWindow()
+            image = vtk.vtkWindowToImageFilter()
+            image.SetInput(window)
+            png_writer = vtk.vtkPNGWriter()
+            png_writer.SetInputConnection(image.GetOutputPort())
+            png_writer.SetFileName(file_name)
+            window.Render()
+            png_writer.Write()
+            self.frame_counter += 1
+        elif key == "c":
+            # print camera setting
+            camera = self.ren.GetActiveCamera()
+            print("Camera settings:")
+            print("  * position:        %s" % (camera.GetPosition(),))
+            print("  * focal point:     %s" % (camera.GetFocalPoint(),))
+            print("  * up vector:       %s" % (camera.GetViewUp(),))
+            print("  * clipping range:  %s" % (camera.GetClippingRange(),))
 
 
 if __name__ == "__main__":
