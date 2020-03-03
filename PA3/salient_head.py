@@ -3,7 +3,7 @@
 # CS 530
 # Project 3 Task 1
 # Luke Jiang
-# 02/21/2020
+# 03/02/2020
 
 """ Description:
 Find and display salient isosurfaces of the head dataset
@@ -24,7 +24,6 @@ import sys
 import argparse
 
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton
-import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
@@ -33,10 +32,19 @@ INIT_CONTOUR_VAL = 700
 MAX_CONTOUR_VAL = 1200
 
 # [isovalue, R, G, B, opacity]
-REN_DATA = [[1010, 197, 140, 133, 0.4],
-            [1080, 230, 230, 230, 1.0]]
+# REN_DATA = [[1010, 197, 140, 133, 0.6],  # 0.4
+#             [1080, 230, 230, 230, 1.0]]
+
+REN_DATA = [[500, 197, 140, 133, 0.6],
+            [1030, 204, 71, 62, 0.7],
+            [1140, 230, 230, 230, 1.0]]
 
 
+# camera settings
+CAM = [[781, -214, 78],             # position
+       [134, 134, 146],             # focal point
+       [0.079, 0.328, -0.941],      # up vector
+       [342, 1237]]                 # clipping range
 
 def makeBasic(filename):
     # read the head image
@@ -88,24 +96,7 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
-        self.slider_contour0 = QSlider()
-        self.slider_contour1 = QSlider()
-        self.slider_opacity0 = QSlider()
-        self.slider_opacity1 = QSlider()
-
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-
-        self.gridlayout.addWidget(QLabel("Contour0 Value"), 4, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider_contour0, 4, 1, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour1 Value"), 4, 2, 1, 1)
-        self.gridlayout.addWidget(self.slider_contour1, 4, 3, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour0 Opacity"), 5, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider_opacity0, 5, 1, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour1 Opacity"), 5, 2, 1, 1)
-        self.gridlayout.addWidget(self.slider_opacity1, 5, 3, 1, 1)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -132,49 +123,21 @@ class IsosurfaceDemo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+
+        # set camera position
+        self.camera = self.ren.GetActiveCamera()
+        self.camera.SetPosition(CAM[0][0], CAM[0][1], CAM[0][2])
+        self.camera.SetFocalPoint(CAM[1][0], CAM[1][1], CAM[1][2])
+        self.camera.SetViewUp(CAM[2])
+        self.camera.SetClippingRange(CAM[3])
+
         self.iren.AddObserver("KeyPressEvent", self.key_pressed_callback)
-
-        def slider_setup(slider, val, bounds, interv):
-            slider.setOrientation(QtCore.Qt.Horizontal)
-            slider.setValue(float(val))
-            slider.setTracking(False)
-            slider.setTickInterval(interv)
-            slider.setTickPosition(QSlider.TicksAbove)
-            slider.setRange(bounds[0], bounds[1])
-
-        # need to adjust the range of slide bars because the initial position of widget would be wrong
-        # if init val > 100
-        slider_contour_range = [0, (MAX_CONTOUR_VAL - INIT_CONTOUR_VAL) / 10]
-        slider_setup(self.ui.slider_contour0, (REN_DATA[0][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
-        slider_setup(self.ui.slider_contour1, (REN_DATA[1][0] - INIT_CONTOUR_VAL)/10, slider_contour_range, 1)
-        slider_setup(self.ui.slider_opacity0, REN_DATA[0][4]*10, [0, 10], 1)
-        slider_setup(self.ui.slider_opacity1, REN_DATA[1][4]*10, [0, 10], 1)
-
-    def contour0_callback(self, val):
-        cval = val * 10 + INIT_CONTOUR_VAL
-        print("contour0: " + str(cval))
-        self.contours[0].SetValue(0, cval)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def contour1_callback(self, val):
-        cval = val * 10 + INIT_CONTOUR_VAL
-        print("contour1: " + str(cval))
-        self.contours[1].SetValue(0, cval)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def opacity0_callback(self, val):
-        self.actors[0].GetProperty().SetOpacity(val / 10)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def opacity1_callback(self, val):
-        self.actors[1].GetProperty().SetOpacity(val / 10)
-        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def key_pressed_callback(self, obj, event):
         key = obj.GetKeySym()
         if key == "s":
             # save frame
-            file_name = "salient_head_frame" + str(self.frame_counter).zfill(5) + ".png"
+            file_name = "salient_head" + str(self.frame_counter).zfill(5) + ".png"
             window = self.ui.vtkWidget.GetRenderWindow()
             image = vtk.vtkWindowToImageFilter()
             image.SetInput(window)
@@ -209,11 +172,5 @@ if __name__ == "__main__":
     window.show()
     window.setWindowState(Qt.WindowMaximized)
     window.iren.Initialize()
-
-    # --hook up callbacks--
-    window.ui.slider_contour0.valueChanged.connect(window.contour0_callback)
-    window.ui.slider_contour1.valueChanged.connect(window.contour1_callback)
-    window.ui.slider_opacity0.valueChanged.connect(window.opacity0_callback)
-    window.ui.slider_opacity1.valueChanged.connect(window.opacity1_callback)
 
     sys.exit(app.exec_())
