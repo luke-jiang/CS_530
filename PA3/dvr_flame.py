@@ -34,11 +34,14 @@ OTF = [[0,      0],
        [63000,  0.4],
        [63001,  0.0]]
 
-# camera setting
-CAM = [[216, 958, 751],
-       [239, 359, 59],
-       [0.66, 0.58, -0.48],
-       [389, 1644]]
+SAMP_DIST = 0.25
+
+# camera settings
+CAM = [[216, 958, 751],         # position
+       [239, 359, 59],          # focal point
+       [0.66, 0.58, -0.48],     # up vector
+       [389, 1644]]             # clipping range
+
 
 def make(filename):
     # read the head image
@@ -119,12 +122,11 @@ class IsosurfaceDemo(QMainWindow):
 
         self.iren.AddObserver("KeyPressEvent", self.key_pressed_callback)
 
-
     def key_pressed_callback(self, obj, event):
         key = obj.GetKeySym()
         if key == "s":
             # save frame
-            file_name = "salient_flame_frame" + str(self.frame_counter).zfill(5) + ".png"
+            file_name = "dvr_flame_" + str(self.frame_counter).zfill(5) + ".png"
             window = self.ui.vtkWidget.GetRenderWindow()
             image = vtk.vtkWindowToImageFilter()
             image.SetInput(window)
