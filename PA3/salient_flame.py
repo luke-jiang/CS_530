@@ -3,7 +3,7 @@
 # CS 530
 # Project 3 Task 1
 # Luke Jiang
-# 02/21/2020
+# 03/02/2020
 
 """ Description:
 Find and display salient isosurfaces of the flame dataset
@@ -33,31 +33,17 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 INIT_CONTOUR_VAL = 1000
 MAX_CONTOUR_VAL = 65000
 
-# REN_DATA = [[9000, 112, 123, 223, 0.5],
-#             [49000, 220, 30, 53, 0.5]]
-
-# REN_DATA = [[32000, 87,  86,  124, 0.5],
-#             [35000, 108, 115, 128, 0.4],
-#             [38000, 201, 62,  71,  0.3],
-#             [41000, 240, 94,  82,  0.2],
-#             [42000, 212, 149, 150, 0.1]]
-
-# REN_DATA = [[32000, 45,  119,  247, 0.5],
-#             [35000, 189, 212, 252, 0.4],
-#             [38000, 247, 20,  20,  0.3],
-#             [41000, 286, 130, 130,  0.3],
-#             [42000, 225, 240, 240, 0.3]]
-
-REN_DATA1 = [[32000, 87,  86,  124, 0],
-            [35000, 108, 115, 128, 0],
-            [31000, 201, 62,  71,  0.3],
-            [41000, 240, 94,  82,  0.4],
-            [51000, 252, 175, 175, 0.7]]
-
 REN_DATA = [[22000, 50,  50,  255, 0.05],
             [25000, 100, 100, 255, 0.05],
-            [52000, 255, 242,  242,  0.1], # 0.1
-            [62000, 255, 27, 27, 0.1]]  #0.1
+            [52000, 255, 242,  242,  0.1],
+            [62000, 255, 27, 27, 0.1]]
+
+# camera settings
+CAM = [[216, 958, 751],         # position
+       [239, 359, 59],          # focal point
+       [0.66, 0.58, -0.48],     # up vector
+       [389, 1644]]             # clipping range
+
 
 def makeBasic(filename):
     # read the head image
@@ -101,21 +87,6 @@ def make(reader, renData):
     return contour, actor
 
 
-def basic(reader):
-    # the contour filter
-    contour = vtk.vtkContourFilter()
-    contour.SetValue(0, 1000)
-    contour.SetInputConnection(reader.GetOutputPort())
-
-    # mapper and actor
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(contour.GetOutputPort())
-
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    return contour, actor
-
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -126,24 +97,7 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
-        self.slider_contour0 = QSlider()
-        self.slider_contour1 = QSlider()
-        self.slider_opacity0 = QSlider()
-        self.slider_opacity1 = QSlider()
-
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-
-        self.gridlayout.addWidget(QLabel("Contour0 Value"), 4, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider_contour0, 4, 1, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour1 Value"), 4, 2, 1, 1)
-        self.gridlayout.addWidget(self.slider_contour1, 4, 3, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour0 Opacity"), 5, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider_opacity0, 5, 1, 1, 1)
-
-        self.gridlayout.addWidget(QLabel("Contour1 Opacity"), 5, 2, 1, 1)
-        self.gridlayout.addWidget(self.slider_opacity1, 5, 3, 1, 1)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -171,50 +125,21 @@ class IsosurfaceDemo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+
+        # set camera position
+        self.camera = self.ren.GetActiveCamera()
+        self.camera.SetPosition(CAM[0][0], CAM[0][1], CAM[0][2])
+        self.camera.SetFocalPoint(CAM[1][0], CAM[1][1], CAM[1][2])
+        self.camera.SetViewUp(CAM[2])
+        self.camera.SetClippingRange(CAM[3])
+
         self.iren.AddObserver("KeyPressEvent", self.key_pressed_callback)
-
-        def slider_setup(slider, val, bounds, interv):
-            slider.setOrientation(QtCore.Qt.Horizontal)
-            slider.setValue(float(val))
-            slider.setTracking(False)
-            slider.setTickInterval(interv)
-            slider.setTickPosition(QSlider.TicksAbove)
-            slider.setRange(bounds[0], bounds[1])
-
-        # need to adjust the range of slide bars because the initial position of widget would be wrong
-        # if init val > 100
-        slider_contour_range = [0, (MAX_CONTOUR_VAL - INIT_CONTOUR_VAL) / 1000]
-        slider_setup(self.ui.slider_contour0, (REN_DATA[2][0] - INIT_CONTOUR_VAL)/1000, slider_contour_range, 1)
-        slider_setup(self.ui.slider_contour1, (REN_DATA[3][0] - INIT_CONTOUR_VAL)/1000, slider_contour_range, 1)
-        slider_setup(self.ui.slider_opacity0, REN_DATA[2][4]*10, [0, 10], 1)
-        slider_setup(self.ui.slider_opacity1, REN_DATA[3][4]*10, [0, 10], 1)
-
-
-    def contour0_callback(self, val):
-        cval = val * 1000 + INIT_CONTOUR_VAL
-        print("contour0: " + str(cval))
-        self.contours[2].SetValue(0, cval)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def contour1_callback(self, val):
-        cval = val * 1000 + INIT_CONTOUR_VAL
-        print("contour1: " + str(cval))
-        self.contours[3].SetValue(0, cval)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def opacity0_callback(self, val):
-        self.actors[2].GetProperty().SetOpacity(val / 10)
-        self.ui.vtkWidget.GetRenderWindow().Render()
-
-    def opacity1_callback(self, val):
-        self.actors[3].GetProperty().SetOpacity(val / 10)
-        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def key_pressed_callback(self, obj, event):
         key = obj.GetKeySym()
         if key == "s":
             # save frame
-            file_name = "salient_flame_frame" + str(self.frame_counter).zfill(5) + ".png"
+            file_name = "salient_flame_" + str(self.frame_counter).zfill(5) + ".png"
             window = self.ui.vtkWidget.GetRenderWindow()
             image = vtk.vtkWindowToImageFilter()
             image.SetInput(window)
@@ -249,11 +174,5 @@ if __name__ == "__main__":
     window.show()
     window.setWindowState(Qt.WindowMaximized)
     window.iren.Initialize()
-
-    # --hook up callbacks--
-    window.ui.slider_contour0.valueChanged.connect(window.contour0_callback)
-    window.ui.slider_contour1.valueChanged.connect(window.contour1_callback)
-    window.ui.slider_opacity0.valueChanged.connect(window.opacity0_callback)
-    window.ui.slider_opacity1.valueChanged.connect(window.opacity1_callback)
 
     sys.exit(app.exec_())
