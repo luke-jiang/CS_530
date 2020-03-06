@@ -5,6 +5,13 @@
 # Luke Jiang
 # 03/02/2020
 
+""" Description:
+Use volume rendering to render the head dataset
+
+Command line interface: python dvr_head.py <head.vti>
+
+"""
+
 
 import vtk
 import sys
@@ -15,6 +22,7 @@ from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 # color transfer function
+# format: [isovalue, R, G, B]
 CTF = [[400, 197, 140, 133],
        [900, 197, 140, 133],
        [1035, 204, 71, 62],
@@ -23,6 +31,7 @@ CTF = [[400, 197, 140, 133],
        [1160, 230, 230, 230]]
 
 # opacity transfer function
+# format: [isovalue, opacity]
 OTF = [[0,      0],
        [399,    0],
        [400,    0.2],
@@ -55,34 +64,11 @@ def make(filename):
     colorTrans.SetColorSpaceToRGB()
     for [isoVal, R, G, B] in CTF:
         colorTrans.AddRGBPoint(isoVal, R/256, G/256, B/256)
-    # colorTrans.AddRGBPoint(400, 197 / 256, 140 / 256, 133 / 256)
-    # colorTrans.AddRGBPoint(900, 197 / 256, 140 / 256, 133 / 256)
-    # colorTrans.AddRGBPoint(1030, 204 / 256, 71 / 256, 62 / 256)
-    # colorTrans.AddRGBPoint(1100, 204 / 256, 71 / 256, 62 / 256)
-    # colorTrans.AddRGBPoint(1140, 230 / 256, 230 / 256, 230 / 256)
-    # colorTrans.AddRGBPoint(1160, 230 / 256, 230 / 256, 230 / 256)
 
     # define the opacity transfer function
     opacityTrans = vtk.vtkPiecewiseFunction()
     for [isoVal, o] in OTF:
         opacityTrans.AddPoint(isoVal, o)
-    # opacityTrans.AddPoint(0, 0)
-    # opacityTrans.AddPoint(399, 0.0)
-    #
-    # opacityTrans.AddPoint(400, 0.2)
-    # opacityTrans.AddPoint(900, 0.2)
-    #
-    # opacityTrans.AddPoint(901, 0)
-    # opacityTrans.AddPoint(1029, 0)
-    #
-    # opacityTrans.AddPoint(1030, 0.4)
-    # opacityTrans.AddPoint(1100, 0.4)
-    #
-    # opacityTrans.AddPoint(1101, 0)
-    # opacityTrans.AddPoint(1139, 0)
-    #
-    # opacityTrans.AddPoint(1140, 1.0)
-    # opacityTrans.AddPoint(1160, 1.0)
 
     # define volume property
     vProp = vtk.vtkVolumeProperty()

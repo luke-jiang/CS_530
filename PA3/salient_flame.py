@@ -24,15 +24,11 @@ import vtk
 import sys
 import argparse
 
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton
-import PyQt5.QtCore as QtCore
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QGridLayout
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-
-INIT_CONTOUR_VAL = 1000
-MAX_CONTOUR_VAL = 65000
-
+# format: [isovalue, R, G, B, opacity]
 REN_DATA = [[22000, 50,  50,  255, 0.05],
             [25000, 100, 100, 255, 0.05],
             [52000, 255, 242,  242,  0.1],
@@ -73,7 +69,6 @@ def make(reader, renData):
     colorTrans = vtk.vtkColorTransferFunction()
     colorTrans.SetColorSpaceToRGB()
     colorTrans.AddRGBPoint(isoValue, R/256, G/256, B/256)
-    # colorTrans.AddRGBPoint(isoValue+1000, (R+10)/256, (G+10)/256, (B+10)/256)
 
     # mapper and actor
     mapper = vtk.vtkDataSetMapper()
@@ -110,7 +105,6 @@ class IsosurfaceDemo(QMainWindow):
         self.ui.setupUi(self)
 
         filename = margs.file                # flame dataset file name
-        self.contourVal = INIT_CONTOUR_VAL   # initial contour value
         self.frame_counter = 0
 
         self.reader, self.ren = makeBasic(filename)

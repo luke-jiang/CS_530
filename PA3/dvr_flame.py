@@ -5,6 +5,13 @@
 # Luke Jiang
 # 03/02/2020
 
+""" Description:
+Use volume rendering to render the flame dataset
+
+Command line interface: python dvr_flame.py <flame.vti>
+
+"""
+
 
 import vtk
 import sys
@@ -16,6 +23,7 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
 # color transfer function
+# format: [isovalue, R, G, B]
 CTF = [[16000, 50, 50, 255],
        [25000, 100, 100, 255],
        [30000, 255, 163, 0],
@@ -24,6 +32,7 @@ CTF = [[16000, 50, 50, 255],
        [62000, 255, 27, 27]]
 
 # opacity transfer function
+# format: [isovalue, opacity]
 OTF = [[0,      0],
        [15999,  0],
        [16000,  0.4],

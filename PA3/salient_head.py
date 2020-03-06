@@ -27,13 +27,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLa
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-# valid range of isovalues
-INIT_CONTOUR_VAL = 700
-MAX_CONTOUR_VAL = 1200
-
-# [isovalue, R, G, B, opacity]
-# REN_DATA = [[1010, 197, 140, 133, 0.6],  # 0.4
-#             [1080, 230, 230, 230, 1.0]]
 
 REN_DATA = [[500, 197, 140, 133, 0.6],
             [1030, 204, 71, 62, 0.7],
@@ -109,7 +102,6 @@ class IsosurfaceDemo(QMainWindow):
         self.ui.setupUi(self)
 
         filename = margs.file                # head dataset file name
-        self.contourVal = INIT_CONTOUR_VAL   # initial contour value
         self.frame_counter = 0
 
         self.reader, self.ren = makeBasic(filename)
