@@ -1,44 +1,42 @@
 import vtk
 import math
 
-table = vtk.vtkTable()
-arrX = vtk.vtkFloatArray()
-arrX.SetName("X Axis")
-table.AddColumn(arrX)
-arrC = vtk.vtkFloatArray()
-arrC.SetName("Cosine")
-table.AddColumn(arrC)
-arrS = vtk.vtkFloatArray()
-arrS.SetName("Sine")
-table.AddColumn(arrS)
 
-numPoints = 69
-inc = 7.5 / (numPoints - 1)
-table.SetNumberOfRows(numPoints)
-for i in range(0, numPoints):
-    table.SetValue(i, 0, i * inc)
-    table.SetValue(i, 1, math.cos(i * inc))
-    table.SetValue(i, 2, math.sin(i * inc))
+def graph(data):
+    table = vtk.vtkTable()
+    arrX = vtk.vtkFloatArray()
+    arrX.SetName("X")
+    table.AddColumn(arrX)
+    arrP = vtk.vtkFloatArray()
+    arrP.SetName("Pressure")
+    table.AddColumn(arrP)
+    arrV = vtk.vtkFloatArray()
+    arrV.SetName("Velocity")
+    table.AddColumn(arrV)
 
-view = vtk.vtkContextView()
-chart = vtk.vtkChartXY()
-view.GetScene().AddItem(chart)
+    [locations, pressures, velocities] = data
 
-line = chart.AddPlot(0)
-line.SetInputData(table)
-line.SetInputArray(0, "X Axis")
-line.SetInputArray(1, "Sine")
-# line.SetInputArray(2, "Cosine")
-line.SetColor(0, 255, 0, 255)
-line.SetWidth(2.0)
-#
-# line = chart.AddPlot(0)
-# line.SetInputData(table, 0, 2)
-# line.SetColor(255, 0, 0, 255)
-# line.SetWidth(1.0)
+    numPoints = min(len(locations), len(pressures))
+    # inc = 7.5 / (numPoints - 1)
+    table.SetNumberOfRows(numPoints)
+    for i in range(0, numPoints):
+        table.SetValue(i, 0, locations[i])
+        table.SetValue(i, 1, pressures[i])
+        table.SetValue(i, 2, velocities[i])
 
-view.GetInteractor().Initialize()
-view.GetInteractor().Start()
+    view = vtk.vtkContextView()
+    chart = vtk.vtkChartXY()
+    view.GetScene().AddItem(chart)
 
+    line1 = chart.AddPlot(vtk.vtkChart.LINE)
+    line1.SetInputData(table, "X", "Pressure")
+    line1.SetColor(0, 255, 0, 255)
+    line1.SetWidth(2.0)
 
+    line2 = chart.AddPlot(vtk.vtkChart.LINE)
+    line2.SetInputData(table, "X", "Velocity")
+    line2.SetColor(0, 0, 0, 255)
+    line2.SetWidth(2.0)
 
+    view.GetInteractor().Initialize()
+    view.GetInteractor().Start()
