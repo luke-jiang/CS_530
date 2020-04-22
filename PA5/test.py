@@ -3,10 +3,11 @@ import sys
 import argparse
 import math
 
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+from Project5.plot import *
 
 velocity_colormap = [[0.0, 0, 1, 1],
                      [0.218395, 0, 0, 1],
@@ -25,10 +26,9 @@ def read():
     reader.SetFileName("train-small.vtu")
     reader.Update()
     # print(reader.GetOutput())
-    getData(reader)
-
-    # tmp = getValues([reader.GetOutput(), 1], [0, 0, 0, 50, 50, 50, 10])
+    # tmp = getValues([reader.GetOutput(), 1], [-22600, -11172, 100, 50, 50, 0, 10])
     # print(tmp)
+    # graph()
     return reader
 
 def drawLine():
@@ -49,8 +49,6 @@ def drawLine():
 
 
 
-
-
 def getValues(data, points):
     [dataset, index] = data
     locator = vtk.vtkPointLocator()
@@ -68,21 +66,33 @@ def getValues(data, points):
         vals.append(val)
     return vals
 
-
-def getData(reader):
-    # pressure = reader.GetOutput().GetPointData().GetArray(0)
-    # print(pressure)
-    # min = pressure.GetNumberOfTuples()
-    # max = pressure.GetNumberOfComponents()
-    # for i in range(0, 10000, 100):
-    #     print(pressure.GetTuple(i))
+def sample_along_line(dataset, points):
     locator = vtk.vtkPointLocator()
-    locator.SetDataSet(reader.GetOutput())
+    locator.SetDataSet(dataset)
     locator.BuildLocator()
-    id = locator.FindClosestPoint(0, 0, 0)
-    print(id)
-    pressure = reader.GetOutput().GetPointData().GetArray(0)
-    print(pressure.GetTuple(id))
+
+    pressureArr = dataset.GetPointData().GetArray(0)
+    velocityArr = dataset.GetPointData().GetArray(1)
+
+    locations = list()
+    velocities = list()
+    pressures = list()
+
+    [x, y, z, xs, ys, zs, step] = points
+    for i in range(0, step):
+        xi = x + xs * i
+        yi = y + ys * i
+        zi = z + zs * i
+        id = locator.FindClosestPoint(xi, yi, zi)
+
+        (p,) = pressureArr.GetTuple(id)
+        (vx, vy, vz) = velocityArr.GetTuple(id)
+        v = math.sqrt(vx ** 2 + vy ** 2 + vz ** 2)
+        pressures.append(p)
+        velocities.append(v)
+        locations.append(i)
+
+    return [locations, pressures, velocities]
 
 
 def makeTrain(reader):
@@ -151,10 +161,11 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
-        # self.slider_x0 = QSlider()
+        self.push_plot = QPushButton()
+        self.push_plot.setText('Plot')
 
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-
+        self.gridlayout.addWidget(self.push_plot, 5, 5, 1, 1)
         # self.gridlayout.addWidget(QLabel("X0"), 4, 0, 1, 1)
         # self.gridlayout.addWidget(self.slider_x0, 4, 1, 1, 1)
 
@@ -168,11 +179,11 @@ class Demo(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.frame_counter = 0
+        # self.frame_counter = 0
 
-        reader = read()
-        self.trainActor = makeTrain(reader)
-        self.streamerActors = makeStream(reader)
+        self.reader = read()
+        self.trainActor = makeTrain(self.reader)
+        self.streamerActors = makeStream(self.reader)
         self.lineActor = drawLine()
 
         self.ren = vtk.vtkRenderer()
@@ -184,9 +195,18 @@ class Demo(QMainWindow):
         self.ren.SetBackground(0.75, 0.75, 0.75)
         self.ren.ResetCamera()
 
+        # self.rightRen = vtk.vtkRenderer()
+        # self.rightRen.SetViewPort(plot())
+        # self.rightRen.SetBackground(0.75, 0.75, 0.75)
+        # self.rightRen.ResetCamera()
+
+
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
 
+    def plot_callback(self):
+        data = sample_along_line(self.reader.GetOutput(), [-22600, -11172, 100, 1000, 1000, 1000, 100])
+        graph(data)
 
 
 if __name__ == "__main__":
@@ -206,5 +226,6 @@ if __name__ == "__main__":
 
     # --hook up callbacks--
     # window.ui.slider_x0.valueChanged.connect(window.X0_callback)
+    window.ui.push_plot.clicked.connect(window.plot_callback)
 
     sys.exit(app.exec_())
