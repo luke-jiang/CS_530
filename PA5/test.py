@@ -7,7 +7,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLa
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-from Project5.plot import *
 
 velocity_colormap = [[0.0, 0, 1, 1],
                      [0.218395, 0, 0, 1],
@@ -19,7 +18,11 @@ pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
                      [0.989821, 0.865003, 0.865003, 0.865003],
                      [1.07119, 0.705882, 0.015686, 0.14902]]
 
+# range of the input data set
+datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
 
+DATA_PRESSURE = 0
+DATA_VELOCITY = 1
 
 def read():
     reader = vtk.vtkXMLUnstructuredGridReader()
@@ -31,10 +34,19 @@ def read():
     # graph()
     return reader
 
-def drawLine():
+
+def drawLine(p0, p1):
+    """
+    Draw a line from point p0 to p1.
+    :param p0: starting point
+    :param p1: ending point
+    :return: an actor
+    """
+    (x0, y0, z0) = p0
+    (x1, y1, z1) = p1
     linesrc = vtk.vtkLineSource()
-    linesrc.SetPoint1(-22600, -11172, 100)
-    linesrc.SetPoint2(47391, 12639, 100)
+    linesrc.SetPoint1(x0, y0, z0)
+    linesrc.SetPoint2(x1, y1, z1)
     linesrc.Update()
 
     mapper = vtk.vtkPolyDataMapper()
@@ -48,31 +60,20 @@ def drawLine():
     return actor
 
 
-
-def getValues(data, points):
-    [dataset, index] = data
-    locator = vtk.vtkPointLocator()
-    locator.SetDataSet(dataset)
-    locator.BuildLocator()
-    darray = dataset.GetPointData().GetArray(index)
-    vals = list()
-    [x, y, z, xs, ys, zs, step] = points
-    for i in range(0, step):
-        xi = x + xs * i
-        yi = y + ys * i
-        zi = z + zs * i
-        id = locator.FindClosestPoint(xi, yi, zi)
-        val = darray.GetTuple(id)
-        vals.append(val)
-    return vals
-
 def sample_along_line(dataset, points):
+    """
+    Sample pressure and velocity magnitude along a line
+    :param dataset: the dataset that contains two arrays
+    :param points: [start_x, start_y, start_z, x_step, y_step, z_step, total_points]
+    :return: three arrays storing location, pressure and velocity
+             magnitude data
+    """
     locator = vtk.vtkPointLocator()
     locator.SetDataSet(dataset)
     locator.BuildLocator()
 
-    pressureArr = dataset.GetPointData().GetArray(0)
-    velocityArr = dataset.GetPointData().GetArray(1)
+    pressureArr = dataset.GetPointData().GetArray(DATA_PRESSURE)
+    velocityArr = dataset.GetPointData().GetArray(DATA_VELOCITY)
 
     locations = list()
     velocities = list()
@@ -90,12 +91,58 @@ def sample_along_line(dataset, points):
         v = math.sqrt(vx ** 2 + vy ** 2 + vz ** 2)
         pressures.append(p)
         velocities.append(v)
-        locations.append(i)
+        locations.append((xi, yi, zi))
 
     return [locations, pressures, velocities]
 
 
+def graph(data):
+    """
+    Showing the graph the velocity and pressure functions in a new view
+    """
+    table = vtk.vtkTable()
+    arrX = vtk.vtkFloatArray()
+    arrX.SetName("X")
+    table.AddColumn(arrX)
+    arrP = vtk.vtkFloatArray()
+    arrP.SetName("Pressure")
+    table.AddColumn(arrP)
+    arrV = vtk.vtkFloatArray()
+    arrV.SetName("Velocity")
+    table.AddColumn(arrV)
+
+    [locations, pressures, velocities] = data
+
+    numPoints = min(len(locations), len(pressures))
+
+    table.SetNumberOfRows(numPoints)
+    for i in range(0, numPoints):
+        table.SetValue(i, 0, i)
+        table.SetValue(i, 1, pressures[i])
+        table.SetValue(i, 2, velocities[i])
+
+    view = vtk.vtkContextView()
+    chart = vtk.vtkChartXY()
+    view.GetScene().AddItem(chart)
+
+    line1 = chart.AddPlot(vtk.vtkChart.LINE)
+    line1.SetInputData(table, "X", "Pressure")
+    line1.SetColor(166, 101, 174)
+    line1.SetWidth(2.0)
+
+    line2 = chart.AddPlot(vtk.vtkChart.LINE)
+    line2.SetInputData(table, "X", "Velocity")
+    line2.SetColor(230, 54, 56)
+    line2.SetWidth(2.0)
+
+    view.GetInteractor().Initialize()
+    view.GetInteractor().Start()
+
+
 def makeTrain(reader):
+    """
+    Render the train dataset, colored using pressure value
+    """
     lut = vtk.vtkColorTransferFunction()
     lut.SetColorSpaceToRGB()
     for [val, R, G, B] in pressure_colormap:
@@ -104,7 +151,7 @@ def makeTrain(reader):
     mapper = vtk.vtkDataSetMapper()
     mapper.SetInputConnection(reader.GetOutputPort())
     mapper.SetScalarModeToUsePointFieldData()
-    mapper.SelectColorArray(0)
+    mapper.SelectColorArray(DATA_PRESSURE)
     mapper.SetLookupTable(lut)
 
     actor = vtk.vtkActor()
@@ -113,7 +160,11 @@ def makeTrain(reader):
 
     return actor
 
+
 def makeStream(reader):
+    """
+    Create streamlines for the data set, colored by velocity magnitude
+    """
     arrow = vtk.vtkArrowSource()
     arrow.SetTipLength(0.1)
     arrow.SetShaftRadius(0.0001)
@@ -141,11 +192,10 @@ def makeStream(reader):
             streamerMapper.SetInputConnection(streamer.GetOutputPort())
             streamerMapper.SetLookupTable(lut)
             streamerMapper.SetScalarModeToUsePointFieldData()
-            streamerMapper.SelectColorArray(1) # color by velocity
+            streamerMapper.SelectColorArray(DATA_VELOCITY)
 
             streamerActor = vtk.vtkActor()
             streamerActor.SetMapper(streamerMapper)
-            # streamerActor.GetProperty().SetColor(0, 0, 1)
 
             streamerActors.append(streamerActor)
 
@@ -155,7 +205,7 @@ def makeStream(reader):
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName('The Main Window')
-        # MainWindow.setWindowTitle('isosurface')
+        MainWindow.setWindowTitle('Train')
 
         self.centralWidget = QWidget(MainWindow)
         self.gridlayout = QGridLayout(self.centralWidget)
@@ -165,7 +215,7 @@ class Ui_MainWindow(object):
         self.push_plot.setText('Plot')
 
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-        self.gridlayout.addWidget(self.push_plot, 5, 5, 1, 1)
+        self.gridlayout.addWidget(self.push_plot, 0, 5, 1, 1)
         # self.gridlayout.addWidget(QLabel("X0"), 4, 0, 1, 1)
         # self.gridlayout.addWidget(self.slider_x0, 4, 1, 1, 1)
 
@@ -180,11 +230,13 @@ class Demo(QMainWindow):
         self.ui.setupUi(self)
 
         # self.frame_counter = 0
+        self.p0 = datarange[0]
+        self.p1 = datarange[1]
 
         self.reader = read()
         self.trainActor = makeTrain(self.reader)
         self.streamerActors = makeStream(self.reader)
-        self.lineActor = drawLine()
+        self.lineActor = drawLine(self.p0, self.p1)
 
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.trainActor)
@@ -195,17 +247,18 @@ class Demo(QMainWindow):
         self.ren.SetBackground(0.75, 0.75, 0.75)
         self.ren.ResetCamera()
 
-        # self.rightRen = vtk.vtkRenderer()
-        # self.rightRen.SetViewPort(plot())
-        # self.rightRen.SetBackground(0.75, 0.75, 0.75)
-        # self.rightRen.ResetCamera()
-
-
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
 
     def plot_callback(self):
-        data = sample_along_line(self.reader.GetOutput(), [-22600, -11172, 100, 1000, 1000, 1000, 100])
+        step = 100
+        p0 = self.p0
+        p1 = self.p1
+        x = p1[0] - p0[0]
+        y = p1[1] - p0[1]
+        z = p1[2] - p0[2]
+        points_data = [p0[0], p0[1], p0[2], x / step, y / step, z / step, step]
+        data = sample_along_line(self.reader.GetOutput(), points_data)
         graph(data)
 
 
