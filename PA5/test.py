@@ -3,7 +3,8 @@ import sys
 import argparse
 import math
 
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, QLineEdit, QTextEdit
+import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
@@ -23,6 +24,7 @@ datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
 
 DATA_PRESSURE = 0
 DATA_VELOCITY = 1
+
 
 def read():
     reader = vtk.vtkXMLUnstructuredGridReader()
@@ -108,7 +110,7 @@ def graph(data):
     arrP.SetName("Pressure")
     table.AddColumn(arrP)
     arrV = vtk.vtkFloatArray()
-    arrV.SetName("Velocity")
+    arrV.SetName("V_mag")
     table.AddColumn(arrV)
 
     [locations, pressures, velocities] = data
@@ -123,6 +125,9 @@ def graph(data):
 
     view = vtk.vtkContextView()
     chart = vtk.vtkChartXY()
+    chart.SetShowLegend(True)
+    chart.SetTitle("Pressure and Velocity Magnitude vs. Location")
+    chart.GetTitleProperties().SetFontSize(25)
     view.GetScene().AddItem(chart)
 
     line1 = chart.AddPlot(vtk.vtkChart.LINE)
@@ -131,10 +136,11 @@ def graph(data):
     line1.SetWidth(2.0)
 
     line2 = chart.AddPlot(vtk.vtkChart.LINE)
-    line2.SetInputData(table, "X", "Velocity")
+    line2.SetInputData(table, "X", "V_mag")
     line2.SetColor(230, 54, 56)
     line2.SetWidth(2.0)
 
+    view.GetRenderWindow().SetSize(1000, 800)
     view.GetInteractor().Initialize()
     view.GetInteractor().Start()
 
@@ -211,13 +217,69 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
-        self.push_plot = QPushButton()
-        self.push_plot.setText('Plot')
+        # start and end points of the line
+        self.x0_val = QLineEdit()
+        self.y0_val = QLineEdit()
+        self.z0_val = QLineEdit()
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-        self.gridlayout.addWidget(self.push_plot, 0, 5, 1, 1)
-        # self.gridlayout.addWidget(QLabel("X0"), 4, 0, 1, 1)
-        # self.gridlayout.addWidget(self.slider_x0, 4, 1, 1, 1)
+        self.x1_val = QLineEdit()
+        self.y1_val = QLineEdit()
+        self.z1_val = QLineEdit()
+
+        # sampling resolution
+        self.resolution = QSlider()
+        self.res_val = QLineEdit()
+        self.res_val.setText("000")
+        self.res_val.setFixedWidth(150)
+        self.res_val.setAlignment(Qt.AlignLeft)
+        self.res_val.setReadOnly(True)
+
+        # push buttons
+        self.push_drawLine = QPushButton()
+        self.push_drawLine.setText("draw line")
+        self.push_plot = QPushButton()
+        self.push_plot.setText('plot')
+        self.push_saveData = QPushButton()
+        self.push_saveData.setText("save data")
+        self.push_saveCamPos = QPushButton()
+        self.push_saveCamPos.setText("save camera position")
+
+        # dialog
+        self.info = QTextEdit()
+        self.info.setReadOnly(True)
+        self.info.setAcceptRichText(True)
+        self.info.setHtml("<div style='font-weight: bold'>Outputs</div>")
+
+
+
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 12, 10)
+
+        # self.gridlayout.addWidget(QLabel("Line Position"), 0, 11, 1, 1)
+        # self.gridlayout.addWidget(QLabel("Line Position"), 0, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x0"), 0, 11, 1, 1)
+        self.gridlayout.addWidget(self.x0_val, 0, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y0"), 1, 11, 1, 1)
+        self.gridlayout.addWidget(self.y0_val, 1, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z0"), 2, 11, 1, 1)
+        self.gridlayout.addWidget(self.z0_val, 2, 12, 1, 1)
+
+        self.gridlayout.addWidget(QLabel("x1"), 3, 11, 1, 1)
+        self.gridlayout.addWidget(self.x1_val, 3, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y1"), 4, 11, 1, 1)
+        self.gridlayout.addWidget(self.y1_val, 4, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z1"), 5, 11, 1, 1)
+        self.gridlayout.addWidget(self.z1_val, 5, 12, 1, 1)
+
+        self.gridlayout.addWidget(QLabel("Sample Resolution"), 6, 11, 1, 1)
+        self.gridlayout.addWidget(self.res_val, 6, 12, 1, 1)
+        self.gridlayout.addWidget(self.resolution, 7, 11, 1, 2)
+
+        self.gridlayout.addWidget(self.push_plot, 8, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_drawLine, 8, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_saveData, 9, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_saveCamPos, 9, 12, 1, 1)
+
+        self.gridlayout.addWidget(self.info, 10, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -249,6 +311,28 @@ class Demo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+
+        def slider_setup(slider, val, bounds, interv):
+            slider.setOrientation(QtCore.Qt.Horizontal)
+            slider.setValue(float(val))
+            slider.setTracking(False)
+            slider.setTickInterval(interv)
+            slider.setTickPosition(QSlider.TicksAbove)
+            slider.setRange(bounds[0], bounds[1])
+
+        slider_setup(self.ui.resolution, 0, [0, 200], 5)
+
+        def lineEdit_setup(lineEdit, val):
+            lineEdit.setText(str(val))
+            lineEdit.setFixedWidth(150)
+            lineEdit.setAlignment(Qt.AlignLeft)
+
+        lineEdit_setup(self.ui.x0_val, self.p0[0])
+        lineEdit_setup(self.ui.y0_val, self.p0[1])
+        lineEdit_setup(self.ui.z0_val, self.p0[2])
+        lineEdit_setup(self.ui.x1_val, self.p1[0])
+        lineEdit_setup(self.ui.y1_val, self.p1[1])
+        lineEdit_setup(self.ui.z1_val, self.p1[2])
 
     def plot_callback(self):
         step = 100
