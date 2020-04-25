@@ -343,11 +343,11 @@ class Demo(QMainWindow):
         points_data = [p0[0], p0[1], p0[2], x / step, y / step, z / step, step]
         data = sample_along_line(self.reader.GetOutput(), points_data)
         self.dataCache = data
-        self.ui.log.insertPlainText("Plotting pressure and velocity along line\n")
+        self.ui.log.insertPlainText("-Plotting pressure and velocity along line\n")
         graph(data)
 
     def check_range(self, s):
-        self.ui.log.insertPlainText(s + " is out of range\n")
+        self.ui.log.insertPlainText("-Value " + s + " is out of range\n")
 
     def drawLine_callback(self):
         x0 = float(self.ui.x0_val.text())
@@ -375,23 +375,32 @@ class Demo(QMainWindow):
         self.linesrc.SetPoint1(x0, y0, z0)
         self.linesrc.SetPoint2(x1, y1, z1)
         self.linesrc.Update()
-        self.ui.log.insertPlainText('Line drawn from ' + str(self.p0) + ' to ' + str(self.p1) +  '\n')
+        self.ui.log.insertPlainText('-Line drawn from ' + str(self.p0) + ' to ' + str(self.p1) +  '\n')
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def resolution_callback(self, val):
         oldval = self.resolution
         self.resolution = val
         self.ui.res_val.setText(str(val))
-        self.ui.log.insertPlainText('Sample resolution changed from ' + str(oldval) + ' to ' + str(val) + '\n')
+        self.ui.log.insertPlainText('-Sample resolution changed from ' + str(oldval) + ' to ' + str(val) + '\n')
 
     def saveData_callback(self):
         curr = str(datetime.now())
         filename = "train_line " + curr
         if self.dataCache is None:
-            self.ui.log.insertPlainText('Error: no data to save\n')
+            self.ui.log.insertPlainText('-Error: no data to save\n')
+            return
         with open(filename, 'w') as fd:
             fd.write(str(self.dataCache))
-        self.ui.log.insertPlainText('Data written to file ' + filename + '\n')
+        self.ui.log.insertPlainText('-Data written to file ' + filename + '\n')
+
+    def saveCamPos_callback(self):
+        camera = self.ren.GetActiveCamera()
+        self.ui.log.insertPlainText("-Camera settings:\n")
+        self.ui.log.insertPlainText("  * position:        %s\n" % (camera.GetPosition(),))
+        self.ui.log.insertPlainText("  * focal point:     %s\n" % (camera.GetFocalPoint(),))
+        self.ui.log.insertPlainText("  * up vector:       %s\n" % (camera.GetViewUp(),))
+        self.ui.log.insertPlainText("  * clipping range:  %s\n" % (camera.GetClippingRange(),))
 
 
 
@@ -416,6 +425,7 @@ if __name__ == "__main__":
     window.ui.push_plot.clicked.connect(window.plot_callback)
     window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
     window.ui.push_saveData.clicked.connect(window.saveData_callback)
+    window.ui.push_saveCamPos.clicked.connect(window.saveCamPos_callback)
     window.ui.resolution.valueChanged.connect(window.resolution_callback)
 
 
