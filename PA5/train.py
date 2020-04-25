@@ -9,6 +9,8 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+#python test.py train-small.vtu
+
 
 velocity_colormap = [[0.0, 0, 1, 1],
                      [0.218395, 0, 0, 1],
@@ -28,9 +30,9 @@ DATA_PRESSURE = 0
 DATA_VELOCITY = 1
 
 
-def read():
+def read(filename):
     reader = vtk.vtkXMLUnstructuredGridReader()
-    reader.SetFileName("train-small.vtu")
+    reader.SetFileName(filename)
     reader.Update()
     # print(reader.GetOutput())
     # tmp = getValues([reader.GetOutput(), 1], [-22600, -11172, 100, 50, 50, 0, 10])
@@ -284,7 +286,7 @@ class Ui_MainWindow(object):
 
 class Demo(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, margs=None):
         QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -293,8 +295,9 @@ class Demo(QMainWindow):
         self.p1 = datarange[1]
         self.dataCache = None
         self.resolution = init_resolution
+        self.filename = margs.train_file
 
-        self.reader = read()
+        self.reader = read(self.filename)
         self.trainActor = makeTrain(self.reader)
         self.streamerActors = makeStream(self.reader)
         self.linesrc, self.lineActor = drawLine(self.p0, self.p1)
@@ -408,14 +411,13 @@ class Demo(QMainWindow):
 
 if __name__ == "__main__":
     # --define argument parser and parse arguments--
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('cfd_file')
-    # parser.add_argument('wing_file')
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('train_file')
+    args = parser.parse_args()
 
     # --main app--
     app = QApplication(sys.argv)
-    window = Demo()
+    window = Demo(margs=args)
     window.ui.vtkWidget.GetRenderWindow().SetSize(800, 800)
     window.show()
     window.setWindowState(Qt.WindowMaximized)
