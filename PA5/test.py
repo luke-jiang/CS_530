@@ -21,6 +21,7 @@ pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
 
 # range of the input data set
 datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
+init_resolution = 100
 
 DATA_PRESSURE = 0
 DATA_VELOCITY = 1
@@ -229,7 +230,7 @@ class Ui_MainWindow(object):
         # sampling resolution
         self.resolution = QSlider()
         self.res_val = QLineEdit()
-        self.res_val.setText("000")
+        self.res_val.setText(str(init_resolution))
         self.res_val.setFixedWidth(150)
         self.res_val.setAlignment(Qt.AlignLeft)
         self.res_val.setReadOnly(True)
@@ -290,8 +291,7 @@ class Demo(QMainWindow):
         self.p0 = datarange[0]
         self.p1 = datarange[1]
         self.dataCache = None
-        self.radius = 0
-
+        self.resolution = init_resolution
 
         self.reader = read()
         self.trainActor = makeTrain(self.reader)
@@ -318,7 +318,7 @@ class Demo(QMainWindow):
             slider.setTickPosition(QSlider.TicksAbove)
             slider.setRange(bounds[0], bounds[1])
 
-        slider_setup(self.ui.resolution, 0, [0, 200], 5)
+        slider_setup(self.ui.resolution, init_resolution, [50, 200], 5)
 
         def lineEdit_setup(lineEdit, val):
             lineEdit.setText(str(val))
@@ -333,7 +333,7 @@ class Demo(QMainWindow):
         lineEdit_setup(self.ui.z1_val, self.p1[2])
 
     def plot_callback(self):
-        step = 100
+        step = self.resolution
         p0 = self.p0
         p1 = self.p1
         x = p1[0] - p0[0]
@@ -377,6 +377,14 @@ class Demo(QMainWindow):
         self.ui.log.insertPlainText('Line drawn from ' + str(self.p0) + ' to ' + str(self.p1) +  '\n')
         self.ui.vtkWidget.GetRenderWindow().Render()
 
+    def resolution_callback(self, val):
+        oldval = self.resolution
+        self.resolution = val
+        self.ui.res_val.setText(str(val))
+        self.ui.log.insertPlainText('Sample resolution changed from ' + str(oldval) + ' to ' + str(val) + '\n')
+
+
+
 
 
 if __name__ == "__main__":
@@ -397,5 +405,6 @@ if __name__ == "__main__":
     # --hook up callbacks--
     window.ui.push_plot.clicked.connect(window.plot_callback)
     window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
+    window.ui.resolution.valueChanged.connect(window.resolution_callback)
 
     sys.exit(app.exec_())
