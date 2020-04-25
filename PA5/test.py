@@ -59,7 +59,7 @@ def drawLine(p0, p1):
     actor.GetProperty().SetColor(0.2, 0.2, 0.2)
     actor.GetProperty().SetLineWidth(4)
 
-    return actor
+    return linesrc, actor
 
 
 def sample_along_line(dataset, points):
@@ -245,17 +245,13 @@ class Ui_MainWindow(object):
         self.push_saveCamPos.setText("save camera position")
 
         # dialog
-        self.info = QTextEdit()
-        self.info.setReadOnly(True)
-        self.info.setAcceptRichText(True)
-        self.info.setHtml("<div style='font-weight: bold'>Outputs</div>")
-
-
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        # self.log.setAcceptRichText(True)
+        # self.log.setHtml("<div style='font-weight: bold'>Outputs</div>")
 
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 12, 10)
 
-        # self.gridlayout.addWidget(QLabel("Line Position"), 0, 11, 1, 1)
-        # self.gridlayout.addWidget(QLabel("Line Position"), 0, 12, 1, 1)
         self.gridlayout.addWidget(QLabel("x0"), 0, 11, 1, 1)
         self.gridlayout.addWidget(self.x0_val, 0, 12, 1, 1)
         self.gridlayout.addWidget(QLabel("y0"), 1, 11, 1, 1)
@@ -279,7 +275,7 @@ class Ui_MainWindow(object):
         self.gridlayout.addWidget(self.push_saveData, 9, 11, 1, 1)
         self.gridlayout.addWidget(self.push_saveCamPos, 9, 12, 1, 1)
 
-        self.gridlayout.addWidget(self.info, 10, 11, 2, 2)
+        self.gridlayout.addWidget(self.log, 10, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -291,14 +287,16 @@ class Demo(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # self.frame_counter = 0
         self.p0 = datarange[0]
         self.p1 = datarange[1]
+        self.dataCache = None
+        self.radius = 0
+
 
         self.reader = read()
         self.trainActor = makeTrain(self.reader)
         self.streamerActors = makeStream(self.reader)
-        self.lineActor = drawLine(self.p0, self.p1)
+        self.linesrc, self.lineActor = drawLine(self.p0, self.p1)
 
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.trainActor)
@@ -343,7 +341,42 @@ class Demo(QMainWindow):
         z = p1[2] - p0[2]
         points_data = [p0[0], p0[1], p0[2], x / step, y / step, z / step, step]
         data = sample_along_line(self.reader.GetOutput(), points_data)
+        self.dataCache = data
+        self.ui.log.insertPlainText("Plotting pressure and velocity along line\n")
         graph(data)
+
+    def check_range(self, s):
+        self.ui.log.insertPlainText(s + " is out of range\n")
+
+    def drawLine_callback(self):
+        x0 = float(self.ui.x0_val.text())
+        if x0 < datarange[0][0] or x0 > datarange[1][0]:
+            self.check_range("x0"); return
+        y0 = float(self.ui.y0_val.text())
+        if y0 < datarange[0][1] or y0 > datarange[1][1]:
+            self.check_range("y0"); return
+        z0 = float(self.ui.z0_val.text())
+        if z0 < datarange[0][2] or z0 > datarange[1][2]:
+            self.check_range("z0"); return
+
+        x1 = float(self.ui.x1_val.text())
+        if x1 < datarange[0][0] or x1 > datarange[1][0]:
+            self.ocheck_range("x1"); return
+        y1 = float(self.ui.y1_val.text())
+        if y1 < datarange[0][1] or y1 > datarange[1][1]:
+            self.check_range("y1"); return
+        z1 = float(self.ui.z1_val.text())
+        if z1 < datarange[0][2] or z1 > datarange[1][2]:
+            self.check_range("z1"); return
+
+        self.p0 = (x0, y0, z0)
+        self.p1 = (x1, y1, z1)
+        self.linesrc.SetPoint1(x0, y0, z0)
+        self.linesrc.SetPoint2(x1, y1, z1)
+        self.linesrc.Update()
+        self.ui.log.insertPlainText('Line drawn from ' + str(self.p0) + ' to ' + str(self.p1) +  '\n')
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
 
 
 if __name__ == "__main__":
@@ -362,7 +395,7 @@ if __name__ == "__main__":
     window.iren.Initialize()
 
     # --hook up callbacks--
-    # window.ui.slider_x0.valueChanged.connect(window.X0_callback)
     window.ui.push_plot.clicked.connect(window.plot_callback)
+    window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
 
     sys.exit(app.exec_())
