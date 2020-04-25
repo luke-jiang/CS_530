@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+
+# CS 530
+# Final Project
+# Luke Jiang
+# 04/25/2020
+
+# python train.py train-small.vtu
+
 import vtk
 import sys
 import argparse
@@ -9,7 +18,7 @@ import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
-#python test.py train-small.vtu
+
 
 
 velocity_colormap = [[0.0, 0, 1, 1],
