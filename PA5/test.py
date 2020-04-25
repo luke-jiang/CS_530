@@ -2,6 +2,7 @@ import vtk
 import sys
 import argparse
 import math
+from datetime import datetime
 
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, QLineEdit, QTextEdit
 import PyQt5.QtCore as QtCore
@@ -383,6 +384,15 @@ class Demo(QMainWindow):
         self.ui.res_val.setText(str(val))
         self.ui.log.insertPlainText('Sample resolution changed from ' + str(oldval) + ' to ' + str(val) + '\n')
 
+    def saveData_callback(self):
+        curr = str(datetime.now())
+        filename = "train_line " + curr
+        if self.dataCache is None:
+            self.ui.log.insertPlainText('Error: no data to save\n')
+        with open(filename, 'w') as fd:
+            fd.write(str(self.dataCache))
+        self.ui.log.insertPlainText('Data written to file ' + filename + '\n')
+
 
 
 
@@ -405,6 +415,8 @@ if __name__ == "__main__":
     # --hook up callbacks--
     window.ui.push_plot.clicked.connect(window.plot_callback)
     window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
+    window.ui.push_saveData.clicked.connect(window.saveData_callback)
     window.ui.resolution.valueChanged.connect(window.resolution_callback)
+
 
     sys.exit(app.exec_())
