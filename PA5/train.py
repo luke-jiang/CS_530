@@ -193,6 +193,19 @@ def makeStream(reader):
     for [val, R, G, B] in velocity_colormap:
         lut.AddRGBPoint(val, R, G, B)
 
+    colorBar = vtk.vtkScalarBarActor()
+    colorBar.SetOrientationToHorizontal()
+    colorBar.SetTitle("Velocity Magnitude")
+    colorBar.SetNumberOfLabels(4)
+    colorBar.SetMaximumHeightInPixels(300)
+    colorBar.SetMaximumWidthInPixels(140)
+    # colorBar.GetLabelTextProperty().SetFontSize(50)
+    # colorBar.GetTitleTextProperty().SetFontSize(1)
+    # colorBar.SetAnnotationTextScaling(0.1)
+    colorBar.SetLookupTable(lut)
+    colorBarWidget = vtk.vtkScalarBarWidget()
+    colorBarWidget.SetScalarBarActor(colorBar)
+
     streamerActors = list()
 
     for x in range(-20000, 10000, 2000):
@@ -218,7 +231,7 @@ def makeStream(reader):
 
             streamerActors.append(streamerActor)
 
-    return streamerActors
+    return streamerActors, colorBarWidget
 
 
 class Ui_MainWindow(object):
@@ -308,7 +321,7 @@ class Demo(QMainWindow):
 
         self.reader = read(self.filename)
         self.trainActor = makeTrain(self.reader)
-        self.streamerActors = makeStream(self.reader)
+        self.streamerActors, self.streamline_colorbar = makeStream(self.reader)
         self.linesrc, self.lineActor = drawLine(self.p0, self.p1)
 
         self.ren = vtk.vtkRenderer()
@@ -322,6 +335,9 @@ class Demo(QMainWindow):
 
         self.ui.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.ui.vtkWidget.GetRenderWindow().GetInteractor()
+
+        self.streamline_colorbar.SetInteractor(self.iren)
+        self.streamline_colorbar.On()
 
         def slider_setup(slider, val, bounds, interv):
             slider.setOrientation(QtCore.Qt.Horizontal)
