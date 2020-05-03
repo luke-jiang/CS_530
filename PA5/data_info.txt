@@ -1,0 +1,145 @@
+vtkUnstructuredGrid (0x11f715ad0)
+  Debug: Off
+  Modified Time: 1155
+  Reference Count: 2
+  Registered Events: (none)
+  Information: 0x11f715950
+  Data Released: False
+  Global Release Data: Off
+  UpdateTime: 1223
+  Field Data:
+    Debug: Off
+    Modified Time: 1018
+    Reference Count: 1
+    Registered Events: (none)
+    Number Of Arrays: 0
+    Number Of Components: 0
+    Number Of Tuples: 0
+  Number Of Points: 1020043
+  Number Of Cells: 2570868
+  Cell Data:
+    Debug: Off
+    Modified Time: 1026
+    Reference Count: 1
+    Registered Events:
+      Registered Observers:
+        vtkObserver (0x11f716120)
+          Event: 33
+          EventName: ModifiedEvent
+          Command: 0x11f715a20
+          Priority: 0
+          Tag: 1
+    Number Of Arrays: 0
+    Number Of Components: 0
+    Number Of Tuples: 0
+    Copy Tuple Flags: ( 1 1 1 1 1 0 1 1 )
+    Interpolate Flags: ( 1 1 1 1 1 0 0 1 )
+    Pass Through Flags: ( 1 1 1 1 1 1 1 1 )
+    Scalars: (none)
+    Vectors: (none)
+    Normals: (none)
+    TCoords: (none)
+    Tensors: (none)
+    GlobalIds: (none)
+    PedigreeIds: (none)
+    EdgeFlag: (none)
+  Point Data:
+    Debug: Off
+    Modified Time: 1147
+    Reference Count: 1
+    Registered Events:
+      Registered Observers:
+        vtkObserver (0x11f715a90)
+          Event: 33
+          EventName: ModifiedEvent
+          Command: 0x11f715a20
+          Priority: 0
+          Tag: 1
+    Number Of Arrays: 3
+    Array 0 name = pressure
+    Array 1 name = velocity
+    Array 2 name = Jacobian
+    Number Of Components: 13
+    Number Of Tuples: 1020043
+    Copy Tuple Flags: ( 1 1 1 1 1 0 1 1 )
+    Interpolate Flags: ( 1 1 1 1 1 0 0 1 )
+    Pass Through Flags: ( 1 1 1 1 1 1 1 1 )
+    Scalars:
+      Debug: Off
+      Modified Time: 1131
+      Reference Count: 1
+      Registered Events: (none)
+      Name: pressure
+      Data type: double
+      Size: 1020043
+      MaxId: 1020042
+      NumberOfComponents: 1
+      Information: 0x11f716310
+        Debug: Off
+        Modified Time: 1130
+        Reference Count: 1
+        Registered Events: (none)
+      Name: pressure
+      Number Of Components: 1
+      Number Of Tuples: 1020043
+      Size: 1020043
+      MaxId: 1020042
+      LookupTable: (none)
+    Vectors:
+      Debug: Off
+      Modified Time: 1139
+      Reference Count: 1
+      Registered Events: (none)
+      Name: velocity
+      Data type: double
+      Size: 3060129
+      MaxId: 3060128
+      NumberOfComponents: 3
+      Information: 0x11f719d00
+        Debug: Off
+        Modified Time: 1138
+        Reference Count: 1
+        Registered Events: (none)
+      Name: velocity
+      Number Of Components: 3
+      Number Of Tuples: 1020043
+      Size: 3060129
+      MaxId: 3060128
+      LookupTable: (none)
+    Normals: (none)
+    TCoords: (none)
+    Tensors:
+      Debug: Off
+      Modified Time: 1147
+      Reference Count: 1
+      Registered Events: (none)
+      Name: Jacobian
+      Data type: double
+      Size: 9180387
+      MaxId: 9180386
+      NumberOfComponents: 9
+      Information: 0x11f71a100
+        Debug: Off
+        Modified Time: 1146
+        Reference Count: 1
+        Registered Events: (none)
+      Name: Jacobian
+      Number Of Components: 9
+      Number Of Tuples: 1020043
+      Size: 9180387
+      MaxId: 9180386
+      LookupTable: (none)
+    GlobalIds: (none)
+    PedigreeIds: (none)
+    EdgeFlag: (none)
+  Bounds:
+    Xmin,Xmax: (-23273.1, 46753.9)
+    Ymin,Ymax: (-11936.4, 11875.4)
+    Zmin,Zmax: (0, 13427.4)
+  Compute Time: 1235
+  Number Of Points: 1020043
+  Point Coordinates: 0x11f71a3e0
+  Locator: 0x0
+  Number Of Pieces: 1
+  Piece: 0
+  Ghost Level: 0
