@@ -13,7 +13,8 @@ import argparse
 import math
 from datetime import datetime
 
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, QLineEdit, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, \
+    QLineEdit, QTextEdit, QCheckBox
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
@@ -21,19 +22,30 @@ from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
 
+# velocity_colormap = [[0.0, 0, 1, 1],
+#                      [0.218395, 0, 0, 1],
+#                      [0.241661, 0, 0, 0.502],
+#                      [0.266927, 1, 0, 0],
+#                      [0.485321, 1, 1, 0]]
+#
+pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
+                      [0.989821, 0.865003, 0.865003, 0.865003],
+                      [1.07119, 0.705882, 0.015686, 0.14902]]
+
 velocity_colormap = [[0.0, 0, 1, 1],
                      [0.218395, 0, 0, 1],
                      [0.241661, 0, 0, 0.502],
                      [0.266927, 1, 0, 0],
                      [0.485321, 1, 1, 0]]
 
-pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
-                     [0.989821, 0.865003, 0.865003, 0.865003],
-                     [1.07119, 0.705882, 0.015686, 0.14902]]
-
 # range of the input data set
 datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
 init_resolution = 100
+
+init_cam_pos = [(11739.94921875, -30.8115234375, 151939.9891022906),
+                (11739.94921875, -30.8115234375, 6713.68798828125),
+                (0.0, 1.0, 0.0),
+                (130413.79900618957, 164222.48404136402)]
 
 DATA_PRESSURE = 0
 DATA_VELOCITY = 1
@@ -111,7 +123,17 @@ def sample_along_line(dataset, points):
     return [locations, pressures, velocities]
 
 
-def graph(data):
+def LPF(data):
+    data1 = list.copy(data)
+    num = len(data) - 1
+    for i in range(1, num):
+        data1[i] = (data[i - 1] + data[i + 1]) / 2
+    data1[0] = data[0]
+    data1[num] = data[num]
+    return data1
+
+
+def graph(data, smooth=False):
     """
     Showing the graph the velocity and pressure functions in a new view
     """
@@ -127,8 +149,17 @@ def graph(data):
     table.AddColumn(arrV)
 
     [locations, pressures, velocities] = data
-
     numPoints = min(len(locations), len(pressures))
+
+    # velocities1 = list.copy(velocities)
+    # for i in range(1, numPoints - 1):
+    #     velocities1[i] = (velocities[i - 1] + velocities[i + 1]) / 2
+    # velocities1[0] = velocities[0]
+    # velocities1[numPoints - 1] = velocities[numPoints - 1]
+    # velocities = velocities1
+    if smooth:
+        velocities = LPF(velocities)
+        pressures = LPF(pressures)
 
     table.SetNumberOfRows(numPoints)
     for i in range(0, numPoints):
@@ -175,7 +206,7 @@ def makeTrain(reader):
 
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
-    actor.GetProperty().SetOpacity(0.5)
+    actor.GetProperty().SetOpacity(0.7)
 
     return actor
 
@@ -213,6 +244,7 @@ def makeStream(reader):
             y = -10000
             integ = vtk.vtkRungeKutta4()
             streamer = vtk.vtkStreamTracer()
+            # streamer.SetInputConnection(reader.GetOutputPort())
             streamer.SetInputConnection(reader.GetOutputPort())
             streamer.SetStartPosition(x, y, z)
             streamer.SetMaximumPropagation(250000)
@@ -243,6 +275,9 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
+        self.show_streamlines = QCheckBox()
+        self.show_streamlines.setChecked(True)
+
         # start and end points of the line
         self.x0_val = QLineEdit()
         self.y0_val = QLineEdit()
@@ -260,6 +295,10 @@ class Ui_MainWindow(object):
         self.res_val.setAlignment(Qt.AlignLeft)
         self.res_val.setReadOnly(True)
 
+        # graph options
+        self.smooth = QCheckBox()
+        self.smooth.setChecked(False)
+
         # push buttons
         self.push_drawLine = QPushButton()
         self.push_drawLine.setText("draw line")
@@ -269,6 +308,10 @@ class Ui_MainWindow(object):
         self.push_saveData.setText("save data")
         self.push_saveCamPos = QPushButton()
         self.push_saveCamPos.setText("save camera position")
+        self.push_resetLine = QPushButton()
+        self.push_resetLine.setText("reset line")
+        self.push_resetCamPos = QPushButton()
+        self.push_resetCamPos.setText("reset camera position")
 
         # dialog
         self.log = QTextEdit()
@@ -276,32 +319,41 @@ class Ui_MainWindow(object):
         # self.log.setAcceptRichText(True)
         # self.log.setHtml("<div style='font-weight: bold'>Outputs</div>")
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 12, 10)
 
-        self.gridlayout.addWidget(QLabel("x0"), 0, 11, 1, 1)
-        self.gridlayout.addWidget(self.x0_val, 0, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y0"), 1, 11, 1, 1)
-        self.gridlayout.addWidget(self.y0_val, 1, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z0"), 2, 11, 1, 1)
-        self.gridlayout.addWidget(self.z0_val, 2, 12, 1, 1)
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 15, 11)
 
-        self.gridlayout.addWidget(QLabel("x1"), 3, 11, 1, 1)
-        self.gridlayout.addWidget(self.x1_val, 3, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y1"), 4, 11, 1, 1)
-        self.gridlayout.addWidget(self.y1_val, 4, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z1"), 5, 11, 1, 1)
-        self.gridlayout.addWidget(self.z1_val, 5, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Show Streamlines"), 0, 11, 1, 1)
+        self.gridlayout.addWidget(self.show_streamlines, 0, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("Sample Resolution"), 6, 11, 1, 1)
-        self.gridlayout.addWidget(self.res_val, 6, 12, 1, 1)
-        self.gridlayout.addWidget(self.resolution, 7, 11, 1, 2)
+        self.gridlayout.addWidget(QLabel("x0"), 1, 11, 1, 1)
+        self.gridlayout.addWidget(self.x0_val, 1, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y0"), 2, 11, 1, 1)
+        self.gridlayout.addWidget(self.y0_val, 2, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z0"), 3, 11, 1, 1)
+        self.gridlayout.addWidget(self.z0_val, 3, 12, 1, 1)
 
-        self.gridlayout.addWidget(self.push_plot, 8, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_drawLine, 8, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_saveData, 9, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_saveCamPos, 9, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x1"), 4, 11, 1, 1)
+        self.gridlayout.addWidget(self.x1_val, 4, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y1"), 5, 11, 1, 1)
+        self.gridlayout.addWidget(self.y1_val, 5, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z1"), 6, 11, 1, 1)
+        self.gridlayout.addWidget(self.z1_val, 6, 12, 1, 1)
 
-        self.gridlayout.addWidget(self.log, 10, 11, 2, 2)
+        self.gridlayout.addWidget(QLabel("Sample Resolution"), 7, 11, 1, 1)
+        self.gridlayout.addWidget(self.res_val, 7, 12, 1, 1)
+        self.gridlayout.addWidget(self.resolution, 8, 11, 1, 2)
+
+        self.gridlayout.addWidget(QLabel("Smooth Plot"), 9, 11, 1, 1)
+        self.gridlayout.addWidget(self.smooth, 9, 12, 1, 1)
+
+        self.gridlayout.addWidget(self.push_plot, 10, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_drawLine, 10, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_saveData, 11, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_saveCamPos, 11, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_resetLine, 12, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_resetCamPos, 12, 12, 1, 1)
+
+        self.gridlayout.addWidget(self.log, 13, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -318,6 +370,8 @@ class Demo(QMainWindow):
         self.dataCache = None
         self.resolution = init_resolution
         self.filename = margs.train_file
+        self.camPos = init_cam_pos
+        self.LPFen = False
 
         self.reader = read(self.filename)
         self.trainActor = makeTrain(self.reader)
@@ -361,6 +415,16 @@ class Demo(QMainWindow):
         lineEdit_setup(self.ui.y1_val, self.p1[1])
         lineEdit_setup(self.ui.z1_val, self.p1[2])
 
+    def show_streamlines_callback(self):
+        show = self.ui.show_streamlines.isChecked()
+        for a in self.streamerActors:
+            a.GetProperty().SetOpacity(1 if show else 0)
+        self.ui.log.insertPlainText("-Show streamlines: " + ("ON" if show else "OFF") + "\n")
+
+    def smooth_callback(self):
+        self.LPFen = self.ui.smooth.isChecked()
+        self.ui.log.insertPlainText("-Smooth plot option: " + ("ON" if self.LPFen else "OFF") + "\n")
+
     def plot_callback(self):
         step = self.resolution
         p0 = self.p0
@@ -372,7 +436,11 @@ class Demo(QMainWindow):
         data = sample_along_line(self.reader.GetOutput(), points_data)
         self.dataCache = data
         self.ui.log.insertPlainText("-Plotting pressure and velocity along line\n")
-        graph(data)
+        p_avg = sum(data[1]) / step
+        v_avg = sum(data[2]) / step
+        self.ui.log.insertPlainText("Average pressure: " + str(p_avg) + "\n")
+        self.ui.log.insertPlainText("Average velocity: " + str(v_avg) + "\n")
+        graph(data, self.LPFen)
 
     def check_range(self, s):
         self.ui.log.insertPlainText("-Value " + s + " is out of range\n")
@@ -429,8 +497,27 @@ class Demo(QMainWindow):
         self.ui.log.insertPlainText("  * focal point:     %s\n" % (camera.GetFocalPoint(),))
         self.ui.log.insertPlainText("  * up vector:       %s\n" % (camera.GetViewUp(),))
         self.ui.log.insertPlainText("  * clipping range:  %s\n" % (camera.GetClippingRange(),))
+        self.camPos[0] = camera.GetPosition()
+        self.camPos[1] = camera.GetFocalPoint()
+        self.camPos[2] = camera.GetViewUp()
+        self.camPos[3] = camera.GetClippingRange()
 
+    def resetLine_callback(self):
+        self.p0 = datarange[0]
+        self.p1 = datarange[1]
+        self.linesrc.SetPoint1(self.p0[0], self.p0[1], self.p0[2])
+        self.linesrc.SetPoint2(self.p1[0], self.p1[1], self.p1[2])
+        self.linesrc.Update()
+        self.ui.log.insertPlainText('-Line reset\n')
+        self.ui.vtkWidget.GetRenderWindow().Render()
 
+    def resetCamPos_callback(self):
+        camera = self.ren.GetActiveCamera()
+        camera.SetPosition(self.camPos[0])
+        camera.SetFocalPoint(self.camPos[1])
+        camera.SetViewUp(self.camPos[2])
+        camera.SetClippingRange(self.camPos[3])
+        self.ui.log.insertPlainText('-Camera position is reset\n')
 
 
 
@@ -449,11 +536,16 @@ if __name__ == "__main__":
     window.iren.Initialize()
 
     # --hook up callbacks--
+    window.ui.show_streamlines.toggled.connect(window.show_streamlines_callback)
+    window.ui.smooth.toggled.connect(window.smooth_callback)
     window.ui.push_plot.clicked.connect(window.plot_callback)
     window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
     window.ui.push_saveData.clicked.connect(window.saveData_callback)
     window.ui.push_saveCamPos.clicked.connect(window.saveCamPos_callback)
     window.ui.resolution.valueChanged.connect(window.resolution_callback)
+    window.ui.push_resetCamPos.clicked.connect(window.resetCamPos_callback)
+    window.ui.push_resetLine.clicked.connect(window.resetLine_callback)
+
 
 
     sys.exit(app.exec_())
