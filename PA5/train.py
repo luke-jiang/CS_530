@@ -20,10 +20,12 @@ from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
+# color map for pressure
 pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
                       [0.989821, 0.865003, 0.865003, 0.865003],
                       [1.07119, 0.705882, 0.015686, 0.14902]]
 
+# color map for velocity
 velocity_colormap = [[0.0, 0, 1, 1],
                      [0.218395, 0, 0, 1],
                      [0.241661, 0, 0, 0.502],
@@ -32,8 +34,11 @@ velocity_colormap = [[0.0, 0, 1, 1],
 
 # range of the input data set
 datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
+
+# default sampling resolution
 init_resolution = 100
 
+# default camera position
 init_cam_pos = [(11739.94921875, -30.8115234375, 151939.9891022906),
                 (11739.94921875, -30.8115234375, 6713.68798828125),
                 (0.0, 1.0, 0.0),
