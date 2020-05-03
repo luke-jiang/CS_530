@@ -124,10 +124,13 @@ def sample_along_line(dataset, points):
 
 
 def LPF(data):
+    """
+    1-D Low Pass Filter that averages out the data to be plotted
+    """
     data1 = list.copy(data)
     num = len(data) - 1
     for i in range(1, num):
-        data1[i] = (data[i - 1] + data[i + 1]) / 2
+        data1[i] = (data[i - 1] + data[i] + data[i + 1]) / 3
     data1[0] = data[0]
     data1[num] = data[num]
     return data1
@@ -275,8 +278,13 @@ class Ui_MainWindow(object):
         self.gridlayout = QGridLayout(self.centralWidget)
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
 
+        # checkboxes
+        self.show_colorbar = QCheckBox()
+        self.show_colorbar.setChecked(True)
         self.show_streamlines = QCheckBox()
         self.show_streamlines.setChecked(True)
+        self.smooth = QCheckBox()
+        self.smooth.setChecked(False)
 
         # start and end points of the line
         self.x0_val = QLineEdit()
@@ -294,10 +302,6 @@ class Ui_MainWindow(object):
         self.res_val.setFixedWidth(150)
         self.res_val.setAlignment(Qt.AlignLeft)
         self.res_val.setReadOnly(True)
-
-        # graph options
-        self.smooth = QCheckBox()
-        self.smooth.setChecked(False)
 
         # push buttons
         self.push_drawLine = QPushButton()
@@ -320,40 +324,41 @@ class Ui_MainWindow(object):
         # self.log.setHtml("<div style='font-weight: bold'>Outputs</div>")
 
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 15, 11)
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 16, 11)
 
-        self.gridlayout.addWidget(QLabel("Show Streamlines"), 0, 11, 1, 1)
-        self.gridlayout.addWidget(self.show_streamlines, 0, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Show Colorbar"), 0, 11, 1, 1)
+        self.gridlayout.addWidget(self.show_colorbar, 0, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Show Streamlines"), 1, 11, 1, 1)
+        self.gridlayout.addWidget(self.show_streamlines, 1, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Smooth Plot"), 2, 11, 1, 1)
+        self.gridlayout.addWidget(self.smooth, 2, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("x0"), 1, 11, 1, 1)
-        self.gridlayout.addWidget(self.x0_val, 1, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y0"), 2, 11, 1, 1)
-        self.gridlayout.addWidget(self.y0_val, 2, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z0"), 3, 11, 1, 1)
-        self.gridlayout.addWidget(self.z0_val, 3, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x0"), 3, 11, 1, 1)
+        self.gridlayout.addWidget(self.x0_val, 3, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y0"), 4, 11, 1, 1)
+        self.gridlayout.addWidget(self.y0_val, 4, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z0"), 5, 11, 1, 1)
+        self.gridlayout.addWidget(self.z0_val, 5, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("x1"), 4, 11, 1, 1)
-        self.gridlayout.addWidget(self.x1_val, 4, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y1"), 5, 11, 1, 1)
-        self.gridlayout.addWidget(self.y1_val, 5, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z1"), 6, 11, 1, 1)
-        self.gridlayout.addWidget(self.z1_val, 6, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x1"), 6, 11, 1, 1)
+        self.gridlayout.addWidget(self.x1_val, 6, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y1"), 7, 11, 1, 1)
+        self.gridlayout.addWidget(self.y1_val, 7, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z1"), 8, 11, 1, 1)
+        self.gridlayout.addWidget(self.z1_val, 8, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("Sample Resolution"), 7, 11, 1, 1)
-        self.gridlayout.addWidget(self.res_val, 7, 12, 1, 1)
-        self.gridlayout.addWidget(self.resolution, 8, 11, 1, 2)
+        self.gridlayout.addWidget(QLabel("Sample Resolution"), 9, 11, 1, 1)
+        self.gridlayout.addWidget(self.res_val, 9, 12, 1, 1)
+        self.gridlayout.addWidget(self.resolution, 10, 11, 1, 2)
 
-        self.gridlayout.addWidget(QLabel("Smooth Plot"), 9, 11, 1, 1)
-        self.gridlayout.addWidget(self.smooth, 9, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_plot, 11, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_drawLine, 11, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_saveData, 12, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_saveCamPos, 12, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_resetLine, 13, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_resetCamPos, 13, 12, 1, 1)
 
-        self.gridlayout.addWidget(self.push_plot, 10, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_drawLine, 10, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_saveData, 11, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_saveCamPos, 11, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_resetLine, 12, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_resetCamPos, 12, 12, 1, 1)
-
-        self.gridlayout.addWidget(self.log, 13, 11, 2, 2)
+        self.gridlayout.addWidget(self.log, 14, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -415,6 +420,14 @@ class Demo(QMainWindow):
         lineEdit_setup(self.ui.y1_val, self.p1[1])
         lineEdit_setup(self.ui.z1_val, self.p1[2])
 
+    def show_colorbar_callback(self):
+        show = self.ui.show_colorbar.isChecked()
+        if show:
+            self.streamline_colorbar.On()
+        else:
+            self.streamline_colorbar.Off()
+        self.ui.log.insertPlainText("-Show color bar: " + ("ON" if show else "OFF") + "\n")
+
     def show_streamlines_callback(self):
         show = self.ui.show_streamlines.isChecked()
         for a in self.streamerActors:
@@ -426,6 +439,7 @@ class Demo(QMainWindow):
         self.ui.log.insertPlainText("-Smooth plot option: " + ("ON" if self.LPFen else "OFF") + "\n")
 
     def plot_callback(self):
+
         step = self.resolution
         p0 = self.p0
         p1 = self.p1
@@ -536,15 +550,18 @@ if __name__ == "__main__":
     window.iren.Initialize()
 
     # --hook up callbacks--
+    window.ui.show_colorbar.toggled.connect(window.show_colorbar_callback)
     window.ui.show_streamlines.toggled.connect(window.show_streamlines_callback)
     window.ui.smooth.toggled.connect(window.smooth_callback)
+
     window.ui.push_plot.clicked.connect(window.plot_callback)
     window.ui.push_drawLine.clicked.connect(window.drawLine_callback)
     window.ui.push_saveData.clicked.connect(window.saveData_callback)
     window.ui.push_saveCamPos.clicked.connect(window.saveCamPos_callback)
-    window.ui.resolution.valueChanged.connect(window.resolution_callback)
     window.ui.push_resetCamPos.clicked.connect(window.resetCamPos_callback)
     window.ui.push_resetLine.clicked.connect(window.resetLine_callback)
+
+    window.ui.resolution.valueChanged.connect(window.resolution_callback)
 
 
 
