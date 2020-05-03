@@ -20,14 +20,6 @@ from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
-
-
-# velocity_colormap = [[0.0, 0, 1, 1],
-#                      [0.218395, 0, 0, 1],
-#                      [0.241661, 0, 0, 0.502],
-#                      [0.266927, 1, 0, 0],
-#                      [0.485321, 1, 1, 0]]
-#
 pressure_colormap = [[0.908456, 0.231373, 0.298039, 0.752941],
                       [0.989821, 0.865003, 0.865003, 0.865003],
                       [1.07119, 0.705882, 0.015686, 0.14902]]
@@ -154,12 +146,6 @@ def graph(data, smooth=False):
     [locations, pressures, velocities] = data
     numPoints = min(len(locations), len(pressures))
 
-    # velocities1 = list.copy(velocities)
-    # for i in range(1, numPoints - 1):
-    #     velocities1[i] = (velocities[i - 1] + velocities[i + 1]) / 2
-    # velocities1[0] = velocities[0]
-    # velocities1[numPoints - 1] = velocities[numPoints - 1]
-    # velocities = velocities1
     if smooth:
         velocities = LPF(velocities)
         pressures = LPF(pressures)
