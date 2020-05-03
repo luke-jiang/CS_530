@@ -38,6 +38,8 @@ datarange = [(-23274., -11937., 0.), (46753., 11875., 13427.)]
 # default sampling resolution
 init_resolution = 100
 
+init_plane_position = 11740
+
 # default camera position
 init_cam_pos = [(11739.94921875, -30.8115234375, 151939.9891022906),
                 (11739.94921875, -30.8115234375, 6713.68798828125),
@@ -190,7 +192,7 @@ def makePlane(reader):
         lut.AddRGBPoint(val, R, G, B)
 
     plane = vtk.vtkPlane()
-    plane.SetOrigin(11740, -30, 6713)
+    plane.SetOrigin(init_plane_position, -30, 6713)
     plane.SetNormal(1.0, 0, 0)
 
     planeCut = vtk.vtkCutter()
@@ -207,7 +209,8 @@ def makePlane(reader):
     actor.SetMapper(mapper)
     actor.GetProperty().SetOpacity(0)
 
-    return actor
+    return plane, actor
+
 
 def makeTrain(reader):
     """
@@ -323,6 +326,14 @@ class Ui_MainWindow(object):
         self.res_val.setAlignment(Qt.AlignLeft)
         self.res_val.setReadOnly(True)
 
+        # plane position
+        self.plane_position = QSlider()
+        self.ppos_val = QLineEdit()
+        self.ppos_val.setText(str(init_plane_position))
+        self.ppos_val.setFixedWidth(150)
+        self.ppos_val.setAlignment(Qt.AlignLeft)
+        self.ppos_val.setReadOnly(True)
+
         # push buttons
         self.push_drawLine = QPushButton()
         self.push_drawLine.setText("draw line")
@@ -341,7 +352,7 @@ class Ui_MainWindow(object):
         self.log = QTextEdit()
         self.log.setReadOnly(True)
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 17, 11)
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 19, 11)
 
         self.gridlayout.addWidget(QLabel("Show Colorbar"), 0, 11, 1, 1)
         self.gridlayout.addWidget(self.show_colorbar, 0, 12, 1, 1)
@@ -370,14 +381,18 @@ class Ui_MainWindow(object):
         self.gridlayout.addWidget(self.res_val, 10, 12, 1, 1)
         self.gridlayout.addWidget(self.resolution, 11, 11, 1, 2)
 
-        self.gridlayout.addWidget(self.push_plot, 12, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_drawLine, 12, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_saveData, 13, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_saveCamPos, 13, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_resetLine, 14, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_resetCamPos, 14, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Plane Position"), 12, 11, 1, 1)
+        self.gridlayout.addWidget(self.ppos_val, 12, 12, 1, 1)
+        self.gridlayout.addWidget(self.plane_position, 13, 11, 1, 2)
 
-        self.gridlayout.addWidget(self.log, 15, 11, 2, 2)
+        self.gridlayout.addWidget(self.push_plot, 14, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_drawLine, 14, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_saveData, 15, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_saveCamPos, 15, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_resetLine, 16, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_resetCamPos, 16, 12, 1, 1)
+
+        self.gridlayout.addWidget(self.log, 17, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -393,13 +408,14 @@ class Demo(QMainWindow):
         self.p1 = datarange[1]
         self.dataCache = None
         self.resolution = init_resolution
+        self.plane_position = init_plane_position
         self.filename = margs.train_file
         self.camPos = init_cam_pos
         self.LPFen = False
 
         self.reader = read(self.filename)
         self.trainActor = makeTrain(self.reader)
-        self.planeActor = makePlane(self.reader)
+        self.plane, self.planeActor = makePlane(self.reader)
         self.streamerActors, self.streamline_colorbar = makeStream(self.reader)
         self.linesrc, self.lineActor = drawLine(self.p0, self.p1)
 
@@ -428,6 +444,7 @@ class Demo(QMainWindow):
             slider.setRange(bounds[0], bounds[1])
 
         slider_setup(self.ui.resolution, init_resolution, [50, 200], 5)
+        slider_setup(self.ui.plane_position, (init_plane_position - datarange[0][0])/1000, [0, 70], 2)
 
         def lineEdit_setup(lineEdit, val):
             lineEdit.setText(str(val))
@@ -451,12 +468,14 @@ class Demo(QMainWindow):
         else:
             self.streamline_colorbar.Off()
         self.print_log("-Show color bar: " + ("ON" if show else "OFF"))
+        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def show_streamlines_callback(self):
         show = self.ui.show_streamlines.isChecked()
         for a in self.streamerActors:
             a.GetProperty().SetOpacity(1 if show else 0)
         self.print_log("-Show streamlines: " + ("ON" if show else "OFF"))
+        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def plane_mode_callback(self):
         show = self.ui.plane_mode.isChecked()
@@ -528,6 +547,14 @@ class Demo(QMainWindow):
         self.resolution = val
         self.ui.res_val.setText(str(val))
         self.print_log("-Sample resolution changed from " + str(oldval) + " to " + str(val))
+
+    def plane_callback(self, val):
+        oldval = self.plane_position
+        self.plane_position = val * 1000 + datarange[0][0]
+        self.ui.ppos_val.setText(str(self.plane_position))
+        self.plane.SetOrigin(self.plane_position, -30, 6713)
+        self.print_log("-Plane position changed from " + str(oldval) + " to " + str(self.plane_position))
+        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def saveData_callback(self):
         curr = str(datetime.now())
@@ -602,6 +629,7 @@ if __name__ == "__main__":
     window.ui.push_resetLine.clicked.connect(window.resetLine_callback)
 
     window.ui.resolution.valueChanged.connect(window.resolution_callback)
+    window.ui.plane_position.valueChanged.connect(window.plane_callback)
 
     # --exit--
     sys.exit(app.exec_())
