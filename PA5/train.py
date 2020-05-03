@@ -183,6 +183,32 @@ def graph(data, smooth=False):
     view.GetInteractor().Start()
 
 
+def makePlane(reader):
+    lut = vtk.vtkColorTransferFunction()
+    lut.SetColorSpaceToRGB()
+    for [val, R, G, B] in pressure_colormap:
+        lut.AddRGBPoint(val, R, G, B)
+
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(11740, -30, 6713)
+    plane.SetNormal(1.0, 0, 0)
+
+    planeCut = vtk.vtkCutter()
+    planeCut.SetInputConnection(reader.GetOutputPort())
+    planeCut.SetCutFunction(plane)
+
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputConnection(planeCut.GetOutputPort())
+    mapper.SetScalarModeToUsePointFieldData()
+    mapper.SelectColorArray(DATA_PRESSURE)
+    mapper.SetLookupTable(lut)
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetOpacity(0)
+
+    return actor
+
 def makeTrain(reader):
     """
     Render the train dataset, colored using pressure value
@@ -191,6 +217,10 @@ def makeTrain(reader):
     lut.SetColorSpaceToRGB()
     for [val, R, G, B] in pressure_colormap:
         lut.AddRGBPoint(val, R, G, B)
+
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(11740, -30, 6713)
+    plane.SetNormal(1.0, 0, 0)
 
     mapper = vtk.vtkDataSetMapper()
     mapper.SetInputConnection(reader.GetOutputPort())
@@ -271,6 +301,8 @@ class Ui_MainWindow(object):
         self.show_colorbar.setChecked(True)
         self.show_streamlines = QCheckBox()
         self.show_streamlines.setChecked(True)
+        self.plane_mode = QCheckBox()
+        self.plane_mode.setChecked(False)
         self.smooth = QCheckBox()
         self.smooth.setChecked(False)
 
@@ -309,41 +341,43 @@ class Ui_MainWindow(object):
         self.log = QTextEdit()
         self.log.setReadOnly(True)
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 16, 11)
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 17, 11)
 
         self.gridlayout.addWidget(QLabel("Show Colorbar"), 0, 11, 1, 1)
         self.gridlayout.addWidget(self.show_colorbar, 0, 12, 1, 1)
         self.gridlayout.addWidget(QLabel("Show Streamlines"), 1, 11, 1, 1)
         self.gridlayout.addWidget(self.show_streamlines, 1, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("Smooth Plot"), 2, 11, 1, 1)
-        self.gridlayout.addWidget(self.smooth, 2, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Plane Mode"), 2, 11, 1, 1)
+        self.gridlayout.addWidget(self.plane_mode, 2, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("Smooth Plot"), 3, 11, 1, 1)
+        self.gridlayout.addWidget(self.smooth, 3, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("x0"), 3, 11, 1, 1)
-        self.gridlayout.addWidget(self.x0_val, 3, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y0"), 4, 11, 1, 1)
-        self.gridlayout.addWidget(self.y0_val, 4, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z0"), 5, 11, 1, 1)
-        self.gridlayout.addWidget(self.z0_val, 5, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x0"), 4, 11, 1, 1)
+        self.gridlayout.addWidget(self.x0_val, 4, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y0"), 5, 11, 1, 1)
+        self.gridlayout.addWidget(self.y0_val, 5, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z0"), 6, 11, 1, 1)
+        self.gridlayout.addWidget(self.z0_val, 6, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("x1"), 6, 11, 1, 1)
-        self.gridlayout.addWidget(self.x1_val, 6, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("y1"), 7, 11, 1, 1)
-        self.gridlayout.addWidget(self.y1_val, 7, 12, 1, 1)
-        self.gridlayout.addWidget(QLabel("z1"), 8, 11, 1, 1)
-        self.gridlayout.addWidget(self.z1_val, 8, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("x1"), 7, 11, 1, 1)
+        self.gridlayout.addWidget(self.x1_val, 7, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("y1"), 8, 11, 1, 1)
+        self.gridlayout.addWidget(self.y1_val, 8, 12, 1, 1)
+        self.gridlayout.addWidget(QLabel("z1"), 9, 11, 1, 1)
+        self.gridlayout.addWidget(self.z1_val, 9, 12, 1, 1)
 
-        self.gridlayout.addWidget(QLabel("Sample Resolution"), 9, 11, 1, 1)
-        self.gridlayout.addWidget(self.res_val, 9, 12, 1, 1)
-        self.gridlayout.addWidget(self.resolution, 10, 11, 1, 2)
+        self.gridlayout.addWidget(QLabel("Sample Resolution"), 10, 11, 1, 1)
+        self.gridlayout.addWidget(self.res_val, 10, 12, 1, 1)
+        self.gridlayout.addWidget(self.resolution, 11, 11, 1, 2)
 
-        self.gridlayout.addWidget(self.push_plot, 11, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_drawLine, 11, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_saveData, 12, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_saveCamPos, 12, 12, 1, 1)
-        self.gridlayout.addWidget(self.push_resetLine, 13, 11, 1, 1)
-        self.gridlayout.addWidget(self.push_resetCamPos, 13, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_plot, 12, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_drawLine, 12, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_saveData, 13, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_saveCamPos, 13, 12, 1, 1)
+        self.gridlayout.addWidget(self.push_resetLine, 14, 11, 1, 1)
+        self.gridlayout.addWidget(self.push_resetCamPos, 14, 12, 1, 1)
 
-        self.gridlayout.addWidget(self.log, 14, 11, 2, 2)
+        self.gridlayout.addWidget(self.log, 15, 11, 2, 2)
 
         MainWindow.setCentralWidget(self.centralWidget)
 
@@ -365,11 +399,13 @@ class Demo(QMainWindow):
 
         self.reader = read(self.filename)
         self.trainActor = makeTrain(self.reader)
+        self.planeActor = makePlane(self.reader)
         self.streamerActors, self.streamline_colorbar = makeStream(self.reader)
         self.linesrc, self.lineActor = drawLine(self.p0, self.p1)
 
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(self.trainActor)
+        self.ren.AddActor(self.planeActor)
         self.ren.AddActor(self.lineActor)
         for i in self.streamerActors:
             self.ren.AddActor(i)
@@ -421,6 +457,17 @@ class Demo(QMainWindow):
         for a in self.streamerActors:
             a.GetProperty().SetOpacity(1 if show else 0)
         self.print_log("-Show streamlines: " + ("ON" if show else "OFF"))
+
+    def plane_mode_callback(self):
+        show = self.ui.plane_mode.isChecked()
+        if show:
+            self.planeActor.GetProperty().SetOpacity(1)
+            self.trainActor.GetProperty().SetOpacity(0.1)
+        else:
+            self.planeActor.GetProperty().SetOpacity(0)
+            self.trainActor.GetProperty().SetOpacity(0.7)
+        self.print_log("-Plane Mode: " + ("ON" if show else "OFF"))
+        self.ui.vtkWidget.GetRenderWindow().Render()
 
     def smooth_callback(self):
         self.LPFen = self.ui.smooth.isChecked()
@@ -497,15 +544,16 @@ class Demo(QMainWindow):
         f = camera.GetFocalPoint()
         v = camera.GetViewUp()
         c = camera.GetClippingRange()
+        self.camPos[0] = p
+        self.camPos[1] = f
+        self.camPos[2] = v
+        self.camPos[3] = c
         self.print_log("-Camera settings:")
         self.print_log("  * position:        " + str(p))
         self.print_log("  * focal point:     " + str(f))
         self.print_log("  * up vector:       " + str(v))
         self.print_log("  * clipping range:  " + str(c))
-        self.camPos[0] = p
-        self.camPos[1] = f
-        self.camPos[2] = v
-        self.camPos[3] = c
+
 
     def resetLine_callback(self):
         self.p0 = datarange[0]
@@ -543,6 +591,7 @@ if __name__ == "__main__":
     # --hook up callbacks--
     window.ui.show_colorbar.toggled.connect(window.show_colorbar_callback)
     window.ui.show_streamlines.toggled.connect(window.show_streamlines_callback)
+    window.ui.plane_mode.toggled.connect(window.plane_mode_callback)
     window.ui.smooth.toggled.connect(window.smooth_callback)
 
     window.ui.push_plot.clicked.connect(window.plot_callback)
@@ -554,6 +603,5 @@ if __name__ == "__main__":
 
     window.ui.resolution.valueChanged.connect(window.resolution_callback)
 
-
-
+    # --exit--
     sys.exit(app.exec_())
