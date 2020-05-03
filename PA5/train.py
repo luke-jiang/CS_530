@@ -224,9 +224,6 @@ def makeStream(reader):
     colorBar.SetNumberOfLabels(4)
     colorBar.SetMaximumHeightInPixels(300)
     colorBar.SetMaximumWidthInPixels(140)
-    # colorBar.GetLabelTextProperty().SetFontSize(50)
-    # colorBar.GetTitleTextProperty().SetFontSize(1)
-    # colorBar.SetAnnotationTextScaling(0.1)
     colorBar.SetLookupTable(lut)
     colorBarWidget = vtk.vtkScalarBarWidget()
     colorBarWidget.SetScalarBarActor(colorBar)
@@ -308,12 +305,9 @@ class Ui_MainWindow(object):
         self.push_resetCamPos = QPushButton()
         self.push_resetCamPos.setText("reset camera position")
 
-        # dialog
+        # log
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        # self.log.setAcceptRichText(True)
-        # self.log.setHtml("<div style='font-weight: bold'>Outputs</div>")
-
 
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 16, 11)
 
@@ -411,23 +405,26 @@ class Demo(QMainWindow):
         lineEdit_setup(self.ui.y1_val, self.p1[1])
         lineEdit_setup(self.ui.z1_val, self.p1[2])
 
+    def print_log(self, s):
+        self.ui.log.insertPlainText(s + "\n")
+
     def show_colorbar_callback(self):
         show = self.ui.show_colorbar.isChecked()
         if show:
             self.streamline_colorbar.On()
         else:
             self.streamline_colorbar.Off()
-        self.ui.log.insertPlainText("-Show color bar: " + ("ON" if show else "OFF") + "\n")
+        self.print_log("-Show color bar: " + ("ON" if show else "OFF"))
 
     def show_streamlines_callback(self):
         show = self.ui.show_streamlines.isChecked()
         for a in self.streamerActors:
             a.GetProperty().SetOpacity(1 if show else 0)
-        self.ui.log.insertPlainText("-Show streamlines: " + ("ON" if show else "OFF") + "\n")
+        self.print_log("-Show streamlines: " + ("ON" if show else "OFF"))
 
     def smooth_callback(self):
         self.LPFen = self.ui.smooth.isChecked()
-        self.ui.log.insertPlainText("-Smooth plot option: " + ("ON" if self.LPFen else "OFF") + "\n")
+        self.print_log("-Smooth plot option: " + ("ON" if self.LPFen else "OFF"))
 
     def plot_callback(self):
 
@@ -440,11 +437,11 @@ class Demo(QMainWindow):
         points_data = [p0[0], p0[1], p0[2], x / step, y / step, z / step, step]
         data = sample_along_line(self.reader.GetOutput(), points_data)
         self.dataCache = data
-        self.ui.log.insertPlainText("-Plotting pressure and velocity along line\n")
+        self.print_log("-Plotting pressure and velocity along line")
         p_avg = sum(data[1]) / step
         v_avg = sum(data[2]) / step
-        self.ui.log.insertPlainText("Average pressure: " + str(p_avg) + "\n")
-        self.ui.log.insertPlainText("Average velocity: " + str(v_avg) + "\n")
+        self.print_log("Average pressure: " + str(p_avg))
+        self.print_log("Average velocity: " + str(v_avg))
         graph(data, self.LPFen)
 
     def check_range(self, s):
@@ -476,36 +473,39 @@ class Demo(QMainWindow):
         self.linesrc.SetPoint1(x0, y0, z0)
         self.linesrc.SetPoint2(x1, y1, z1)
         self.linesrc.Update()
-        self.ui.log.insertPlainText('-Line drawn from ' + str(self.p0) + ' to ' + str(self.p1) +  '\n')
+        self.print_log("-Line drawn from " + str(self.p0) + " to " + str(self.p1))
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def resolution_callback(self, val):
         oldval = self.resolution
         self.resolution = val
         self.ui.res_val.setText(str(val))
-        self.ui.log.insertPlainText('-Sample resolution changed from ' + str(oldval) + ' to ' + str(val) + '\n')
+        self.print_log("-Sample resolution changed from " + str(oldval) + " to " + str(val))
 
     def saveData_callback(self):
         curr = str(datetime.now())
         filename = "train_line " + curr
         if self.dataCache is None:
-            self.ui.log.insertPlainText('-Error: no data to save\n')
-            return
+            self.print_log("-Error: no data to save"); return
         with open(filename, 'w') as fd:
             fd.write(str(self.dataCache))
-        self.ui.log.insertPlainText('-Data written to file ' + filename + '\n')
+        self.print_log("-Data written to file " + filename)
 
     def saveCamPos_callback(self):
         camera = self.ren.GetActiveCamera()
-        self.ui.log.insertPlainText("-Camera settings:\n")
-        self.ui.log.insertPlainText("  * position:        %s\n" % (camera.GetPosition(),))
-        self.ui.log.insertPlainText("  * focal point:     %s\n" % (camera.GetFocalPoint(),))
-        self.ui.log.insertPlainText("  * up vector:       %s\n" % (camera.GetViewUp(),))
-        self.ui.log.insertPlainText("  * clipping range:  %s\n" % (camera.GetClippingRange(),))
-        self.camPos[0] = camera.GetPosition()
-        self.camPos[1] = camera.GetFocalPoint()
-        self.camPos[2] = camera.GetViewUp()
-        self.camPos[3] = camera.GetClippingRange()
+        p = camera.GetPosition()
+        f = camera.GetFocalPoint()
+        v = camera.GetViewUp()
+        c = camera.GetClippingRange()
+        self.print_log("-Camera settings:")
+        self.print_log("  * position:        " + str(p))
+        self.print_log("  * focal point:     " + str(f))
+        self.print_log("  * up vector:       " + str(v))
+        self.print_log("  * clipping range:  " + str(c))
+        self.camPos[0] = p
+        self.camPos[1] = f
+        self.camPos[2] = v
+        self.camPos[3] = c
 
     def resetLine_callback(self):
         self.p0 = datarange[0]
@@ -513,7 +513,7 @@ class Demo(QMainWindow):
         self.linesrc.SetPoint1(self.p0[0], self.p0[1], self.p0[2])
         self.linesrc.SetPoint2(self.p1[0], self.p1[1], self.p1[2])
         self.linesrc.Update()
-        self.ui.log.insertPlainText('-Line reset\n')
+        self.print_log("-Sampling line is reset")
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def resetCamPos_callback(self):
@@ -522,7 +522,7 @@ class Demo(QMainWindow):
         camera.SetFocalPoint(self.camPos[1])
         camera.SetViewUp(self.camPos[2])
         camera.SetClippingRange(self.camPos[3])
-        self.ui.log.insertPlainText('-Camera position is reset\n')
+        self.print_log("-Camera position is reset")
 
 
 
